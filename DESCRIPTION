@@ -1,0 +1,18 @@
+Package: msiCompare
+Type: Package
+Title: What the Package Does (Title Case)
+Version: 0.1.0
+Author: April J Harry
+Maintainer: April J Harry <aharry@purdue.edu>
+Description: Class comparison for Mass Spectrometry Imaging Experiments
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+Imports: 
+  spam,
+  spdep,
+  mvtnorm,
+  lme4,
+  lmerTest,
+  Cardinal
+RoxygenNote: 6.0.1
