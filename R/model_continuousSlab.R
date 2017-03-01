@@ -12,54 +12,61 @@ spatialComparison <- function(msset,sample,conditionOfInterest,
                               feature, nsim=5000, burnin = 2500, trace = T,
                               piPrior = .1, seed = 1, logbase2 = F){
 
-  set.seed(seed)
+  set.seed(seed) #random seed
 
-sample <- factor(sample)
-conditionOfInterest <- factor(conditionOfInterest)
-sampleNames <- levels(sample)
-conditionNames <- levels(conditionOfInterest)
-nCond <- length(conditionNames)
+  sample <- factor(sample) # make the sample labels a factor in case it is a character vector
+  conditionOfInterest <- factor(conditionOfInterest) # make the condition labels a factor in case it is a character vector
+  sampleNames <- levels(sample) #create vector of sample names
+  conditionNames <- levels(conditionOfInterest) #create vector of condition names
+  nCond <- length(conditionNames) #how many conditions there are
 
-N <- length(sample)
-nis <- sapply(sampleNames, function(x) sum(sample == x))
-n <- length(sampleNames)
-id <- as.numeric(sample)
-conditionVec <- ifelse(conditionOfInterest == conditionNames[1], 0, 1)
-X <- matrix(rep(1, N), ncol = 1) #design matrix for intercept and nuisance variables
-X1 <- matrix(conditionVec, ncol = 1)  #design matrix without condition effect
-numCond2 <- sum(conditionVec == 1)
+  N <- length(sample) # how many pixels there are
+  nis <- sapply(sampleNames, function(x) sum(sample == x)) #how many pixels in each sample
+  n <- length(sampleNames) #now many samples there are
+  id <- as.numeric(sample) #convert sample names into id numbers
 
-k <-ncol(X)
-res <- list()
+  #### ONLY IF THERE ARE TWO CONDITIONS #####
+  conditionVec <- ifelse(conditionOfInterest == conditionNames[1], 0, 1) #vector converts condition names from characters to numeric
+  numCond2 <- sum(conditionVec == 1) #number of pixels from condition two
+  ###########################################
 
-# print(paste("Cond of Interest = "))
-# print(conditionOfInterest )
-# print("levels = ")
-# print(levels(conditionOfInterest))
-
-condAndSample <- data.frame(index = numeric(N), name =character(N))
-numSpatialParams <- 0
-nsl <- c()
-j <- 1
-for(s in levels(factor(id))){
-  ind_samp <- id == s
-  for(l in conditionNames){
-    ind_cond <- conditionOfInterest == l
+  X <- matrix(rep(1, N), ncol = 1) #design matrix for intercept and covariates #currently set to intercept only
+  X1 <- matrix(conditionVec, ncol = 1)  #design matrix without condition effect
 
 
-    if(any(ind_samp & ind_cond)){
-      condAndSample[ind_samp & ind_cond,]$index <- j
-      levels(condAndSample$name) <- c(levels(condAndSample$name), paste(s, l,sep="_"))
-      condAndSample[ind_samp & ind_cond,]$name <- paste(s, l,sep="_")
-      numSpatialParams <-  numSpatialParams +1
+  k <-ncol(X) #number of covariates, including intercept
+  res <- list() #list that will hold results
 
-      #####################################################
-      ##################### Initialize W ##################
-      #####################################################
-      assign(paste("W", s, l, sep="_"), adj.grid(coord(msset[,ind_cond & ind_samp]))+0)
-      assign(paste("m", s, l, sep="_"), rowSums(get(paste("W", s, l, sep="_"))))
-      nsl <- c(nsl, length(get(paste("m", s, l, sep="_"))))
-      names(nsl)[j] <- paste(s,l)
+
+  ####################################################################################################
+  ############## Obtain neighborhood matrices for each combination of sample and condition ###########
+  ####################################################################################################
+  condAndSample <- data.frame(index = numeric(N), name =character(N)) #dataframe that numbers the sample/condition combinations
+  numSpatialParams <- 0 #number of spatial parameters to estimate. this will be the number unique of sample/condition pairs that exist in the dataset
+  nsl <- c() ##### vector of number of pixels from each condition and sample pair
+  j <- 1
+  for(s in levels(factor(id))){
+    ind_samp <- id == s # pixels from sample s
+    for(l in conditionNames){
+      ind_cond <- conditionOfInterest == l #pixels from condition l
+
+
+      if(any(ind_samp & ind_cond)){ #check to see if sample/condition combination exists in dataset
+        condAndSample[ind_samp & ind_cond,]$index <- j  #give the same index to all pixels from a given condition and sample
+        levels(condAndSample$name) <- c(levels(condAndSample$name), paste(s, l,sep="_")) #add this combination of condition and sample to the list of names
+        condAndSample[ind_samp & ind_cond,]$name <- paste(s, l,sep="_") #give the same name to all pixels from the same condition and sample
+        numSpatialParams <-  numSpatialParams +1
+
+        #####################################################
+        ##################### Initialize W ##################
+        #####################################################
+        #### Create adjacency matrix for pixels from this condition and sample pair
+        assign(paste("W", s, l, sep="_"), adj.grid(coord(msset[,ind_cond & ind_samp]))+0)
+        #### number of neighbors for each pixel
+        assign(paste("m", s, l, sep="_"), rowSums(get(paste("W", s, l, sep="_"))))
+        ##### number of pixels from this condition and sample pair
+        nsl <- c(nsl, sum(ind_cond & ind_samp))
+        names(nsl)[j] <- paste(s,l)
 
       ###################  ###################  ###################
       ####### Stuff for CARBayes
@@ -92,51 +99,59 @@ for(s in levels(factor(id))){
 nSp <- length(nsl)
 
 condAndSample$name<-factor(condAndSample$name)
-phiVec_m <- rep(0, N)
+####################################################################################################
+####################################################################################################
+####################################################################################################
 
 
-feat <- 1
+phiVec_m <- rep(0, N) #initialize trace vector for spatial effects
+feat <- 1 #initialize feature index
 
-   for(f in feature){
-     print(paste0("Feature ", f, " of ", length(feature)))
-     time <- system.time({
-   y <- spectra(msset)[f,]
+####################################################################################################
+##################################### Fit model feature by feature #################################
+####################################################################################################
 
-   if(logbase2){
-     y[y==0] <- .001
-     y <- log2(y)
-   }
+for(f in feature){
+  print(paste0("Feature ", f, " of ", length(feature)))
+  time <- system.time({ #time the overall model fits
+    y <- spectra(msset)[f,]
 
-
-###########
-# Priors  #
-###########
-beta0<-rep(0,k)			# Prior Mean for beta
-prec0<-diag(.01,k)		# Prior Precision Matrix of beta (vague), independent
-precAlpha0 <- .01 #Prior Precision of slab
-d0<-g0<-.001			# Hyperpriors for tau, taub
-rd <- .00001 # ratio of varSpike/varSlab
+    if(logbase2){ #do log transformation if necessary
+      y[y==0] <- .001 #zeros in the image will cause problems if a log transformation is required. add a small number to the zeroes.
+      y <- log2(y)
+    }
 
 
-#########
-# Inits #
-#########
-lm <- lm(y~X+X1)
-coef <- coef(lm)[-2]
-tau<-1				# Error precision = 1/sigma2
-eps_m.var <- 1/tau
-b<-rep(0,n)			# Random effects (int and slope)
-taub<-1				# Random Effects precision
-#beta<-rep(0,k)			#inital value of intercept
-beta <- coef[1:k]
-alpha <- coef[k+1]
-Z<-as.spam(matrix(0,N,n))	# Random effect design used for updating b
-for (i in 1:n) Z[id==i,i]<-1
-xb <-  X%*%beta
-x1a <- X1 %*% alpha
-zb <-  rep(0, N)
-gamma <- 1
-tauVar <- rep(1000,nSp)
+
+    ####################################################################################################
+    ################################### Set up prior distributions #####################################
+    ####################################################################################################
+    beta0<-rep(0,k)			# Prior Mean for beta
+    prec0<-diag(.01,k)		# Prior Precision Matrix of beta (vague), independent
+    precAlpha0 <- .01 #Prior Precision of slab (value of condition effect if it is not zero)
+    d0<-g0<-.001			# Hyperpriors for tau, taub
+    rd <- .00001 # ratio of varSpike/varSlab
+
+
+    ####################################################################################################
+    ################################### Initialize variables  #####################################
+    ####################################################################################################
+
+    lm <- lm(y~X+X1) ## fit linear model to get reasonable starting values
+    coef <- coef(lm)[-2]
+    tau<-1				# technical error precision
+    eps_m.var <- 1/tau #technical error variance
+    b<-rep(0,n)			# Random effects (int and slope)
+    taub<-1				# Random Effects precision
+    beta <- coef[1:k] #initial value of intercept and covariates
+    alpha <- coef[k+1] #initial value of condition effect
+    Z<-as.spam(matrix(0,N,n))	# Random effect design used for updating b
+    for (i in 1:n) Z[id==i,i]<-1
+    xb <-  X%*%beta
+    x1a <- X1 %*% alpha
+    zb <-  rep(0, N)
+    gamma <- 1 # initiate condition effect as nonzero
+    tauVar <- rep(1000,numSpatialParams) # spatial variances
 
 
 #################
@@ -157,38 +172,34 @@ nu<-d0+n/2
 
 
 
-###################
-# GIBBS SAMPLER	#
-###################
-for (i in 1:nsim) {
+####################################################################################################
+######################################## THE GIBBS SAMPLER  ########################################
+####################################################################################################
+for (i in 1:nsim) { #this is an iterative method, nsim is the number of iterations
 
-
-
-  # Update Beta
-  #intercept and nuisance effects
+  # Update intercept and covariates
   vbeta<-solve(prec0+tau*crossprod(X,X))
   mbeta<-vbeta%*%(prec0%*%beta0 + tau*crossprod(X,y-x1a-zb-phiVec_m))
   beta <-c(rmvnorm(1,mbeta,vbeta))
   xb <-  X%*%beta
   Betas[i,]<- beta
-#print(beta)
 
-  resa <- sum((y-xb-zb-phiVec_m)[conditionVec == 1])
+
+  resa <- sum((y-xb-zb-phiVec_m)[conditionVec == 1]) #residuals for pixels in second condition onlt
+
   # Update Condition effect
-  if(gamma == 1){ #slab
+  if(gamma == 1){ #this is the estimate if the condition effect is not zero
     valph <- 1/(numCond2/eps_m.var + precAlpha0)
     malph <- valph*resa/eps_m.var
     Condition1[i] <- alpha <- rnorm(n = 1, mean = malph, sd = sqrt(valph))
-  }else{
+  }else{ #this is the estimate if the condition effect is zero (or very close to it)
     valph <- 1/(numCond2/eps_m.var + 1/rd * precAlpha0)
     malph <- valph*resa/eps_m.var
     Condition0[i] <- alpha <- rnorm(n = 1, mean = malph, sd = sqrt(valph))
   }
 
   Condition[i] <- alpha
-#print(alpha)
   x1a <- X1 %*% alpha
-#print(length(x1a))
 
 
   # update indicator of differential abundance
@@ -200,29 +211,17 @@ for (i in 1:nsim) {
    gamma <- rbinom(n=1, size = 1, prob = pi1Post)
   gammas[i] <-gamma
 
-  # print("xb1")
-  # print(head(xb1))
-  # print("xb0")
-  # print(head(xb0))
-  #
-
-  # print("gamma")
-  # print(gamma)
-  # print("gamma = 1")
-  # print(beta_g1)
-  # print("gamma = 0")
-  # print(beta_g0)
 
   if(n > 1){
-  # Update b
-  vb<-1/(taub+nis*tau)
-  mb<-vb*(tau*t(Z)%*%(y-x1a-xb-phiVec_m))  # Apparently Crossprod doesn't work with Spammed Z if n is large (e.g., > 1500 or so)??
-  b<-rnorm(n,mb,sqrt(vb))
+    # Update the sample-to-sample effect
+    vb<-1/(taub+nis*tau)
+    mb<-vb*(tau*t(Z)%*%(y-x1a-xb-phiVec_m))
+    b<-rnorm(n,mb,sqrt(vb))
   }
 
-  # Update tau
+  # Update the technical error precision
   if(n > 1){
-  zb<-Z%*%b
+    zb<-Z%*%b
   }else{
     zb <- rep(0, N)
   }
@@ -231,18 +230,19 @@ for (i in 1:nsim) {
   eps_m.var <- 1/tau
 
   if(n > 1){
-  # Update taub
-  m<-c(g0+crossprod(b,b)/2)
-  taubs[i]<-taub<-rgamma(1,nu,m)
+    # Update the precision of the sample effect
+    m<-c(g0+crossprod(b,b)/2)
+    taubs[i]<-taub<-rgamma(1,nu,m)
   }else{
     taubs[i]<-taub<- NA
   }
 
-  ####### Fix tau2 for now
-  #spVar[i,] <- tauVar_m <- rep(.01, n)
 
   offset.phi <- (y-xb-x1a-zb) / eps_m.var
 
+  #########################################################
+  ########### Update the spatial effects ##################
+  #########################################################
 
   j <- 1
   for(s in levels(factor(id))){
@@ -250,24 +250,9 @@ for (i in 1:nsim) {
     for(l in conditionNames){
       ind_cond <- conditionOfInterest == l
 
-
-
-
       if(any(ind_samp & ind_cond)){
 
         offset <- offset.phi[ind_samp & ind_cond]
-
-# print(phiVec_m[ind_samp & ind_cond])
-# print(paste(nsl[j],tauVar[j], eps_m.var, offset[1]))
-# print(get(paste("m", s, l, sep="_")))
-# print(get(paste("Wtrip", s, l, sep="_")))
-# print(get(paste("Wbegfin", s, l, sep="_")))
-
-        # print(class(phiVec_m[ind_samp & ind_cond]))
-        # print(paste(class(as.numeric(nsl[j])),class(tauVar[j]), class(eps_m.var), class(offset[1])))
-        # print(class(get(paste("m", s, l, sep="_"))))
-        # print(class(get(paste("Wtrip", s, l, sep="_"))))
-        # print(class(get(paste("Wbegfin", s, l, sep="_"))))
 
          phiUpdate <- updateSpatial(
                       Wtrip=get(paste("Wtrip", s, l, sep="_")),
@@ -292,10 +277,11 @@ for (i in 1:nsim) {
     }
   }
 
-#print(dim(Betas))
-
+  #########################################################
+  #########################################################
+  #########################################################
   if (i%%1000==0 || i == 1) print(paste0("MCMC Iteration ", i, " of ", nsim))
-} #mcmc iteration
+} #On to the next mcmc iteration
 
 ###########
 # Results #

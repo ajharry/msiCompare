@@ -19,6 +19,7 @@ size2 = size1^2,
 numHealthy = 2,
 numDisease = 2){
 
+  set.seed(seed)
 
 numSample <- numHealthy + numDisease
 
