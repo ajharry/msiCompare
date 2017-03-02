@@ -11,7 +11,7 @@
 spatialComparison <- function(msset,sample,conditionOfInterest,
                               feature, nsim=5000, burnin = 2500, trace = T,
                               piPrior = .1, seed = 1, logbase2 = F){
-
+  print("Initializing spatial components...")
   set.seed(seed) #random seed
 
   sample <- factor(sample) # make the sample labels a factor in case it is a character vector
@@ -107,6 +107,7 @@ condAndSample$name<-factor(condAndSample$name)
 phiVec_m <- rep(0, N) #initialize trace vector for spatial effects
 feat <- 1 #initialize feature index
 
+print("...Initialization done.")
 ####################################################################################################
 ##################################### Fit model feature by feature #################################
 ####################################################################################################
