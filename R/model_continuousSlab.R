@@ -10,7 +10,7 @@
 
 spatialComparison <- function(msset,sample,conditionOfInterest,
                               feature, nsim=5000, burnin = 2500, trace = T,
-                              piPrior = .1, seed = 1, logbase2 = F, coord = coord(msset)){
+                              piPrior = .1, seed = 1, logbase2 = F, coord){
   print("Initializing spatial components...")
   set.seed(seed) #random seed
 
@@ -61,7 +61,7 @@ spatialComparison <- function(msset,sample,conditionOfInterest,
         ##################### Initialize W ##################
         #####################################################
         #### Create adjacency matrix for pixels from this condition and sample pair
-        assign(paste("W", s, l, sep="_"), adj.grid(coord[,ind_cond & ind_samp])+0)
+        assign(paste("W", s, l, sep="_"), adj.grid(coord[ind_cond & ind_samp,])+0)
         #### number of neighbors for each pixel
         assign(paste("m", s, l, sep="_"), rowSums(get(paste("W", s, l, sep="_"))))
         ##### number of pixels from this condition and sample pair
