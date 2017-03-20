@@ -145,7 +145,7 @@ numSpatialParams <- 2 #number of spatial parameters to estimate. this will be th
       x1a <- X1 %*% alpha
       zb <-  rep(0, N)
       gamma <- 1 # initiate condition effect as nonzero
-      tauVar <- rep(1,numSpatialParams) # spatial variances
+      tauVar <- rep(1000,numSpatialParams) # spatial variances
 
 
       #################
