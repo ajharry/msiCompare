@@ -5,12 +5,17 @@
 #' @import mvtnorm
 #' @import lme4
 #' @import spam
+#' @import Cardinal
 #' @export
 #'
 
 spatialComparison <- function(msset,sample,conditionOfInterest,
                               feature, nsim=5000, burnin = 2500, trace = T,
-                              piPrior = .1, seed = 1, logbase2 = F, coord){
+                              piPrior = .1, seed = 1, logbase2 = F, coord = NULL){
+  if(is.null(coord)){
+    coord <- coord(msset)
+  }
+  
   print("Initializing spatial components...")
   set.seed(seed) #random seed
 
