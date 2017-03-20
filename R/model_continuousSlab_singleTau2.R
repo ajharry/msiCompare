@@ -145,7 +145,7 @@ numSpatialParams <- 2 #number of spatial parameters to estimate. this will be th
       x1a <- X1 %*% alpha
       zb <-  rep(0, N)
       gamma <- 1 # initiate condition effect as nonzero
-      tauVar <- rep(1000,numSpatialParams) # spatial variances
+      tauVar <- rep(1,numSpatialParams) # spatial variances
 
 
       #################
@@ -163,7 +163,6 @@ numSpatialParams <- 2 #number of spatial parameters to estimate. this will be th
       ###############################
       d<-d0+N/2
       nu<-d0+n/2
-
 
 
       ####################################################################################################
@@ -195,7 +194,6 @@ numSpatialParams <- 2 #number of spatial parameters to estimate. this will be th
         Condition[i] <- alpha
         x1a <- X1 %*% alpha
 
-
         # update indicator of differential abundance
         loglik_slab <- dnorm(alpha, mean = 0, sd = sqrt(1/precAlpha0), log = T)
         loglik_spike <- dnorm(alpha, mean = 0 , sd = sqrt(rd/precAlpha0), log = T)
@@ -212,6 +210,8 @@ numSpatialParams <- 2 #number of spatial parameters to estimate. this will be th
           mb<-vb*(tau*t(Z)%*%(y-x1a-xb-phiVec_m))
           b<-rnorm(n,mb,sqrt(vb))
         }
+
+
 
         # Update the technical error precision
         if(n > 1){

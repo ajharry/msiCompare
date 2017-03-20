@@ -5,7 +5,8 @@
 \title{fit model}
 \usage{
 spatialComparison(msset, sample, conditionOfInterest, feature, nsim = 5000,
-  burnin = 2500, trace = T, piPrior = 0.1, seed = 1, logbase2 = F)
+  burnin = 2500, trace = T, piPrior = 0.1, seed = 1, logbase2 = F,
+  coord = NULL)
 }
 \arguments{
 \item{msset}{adfdf}

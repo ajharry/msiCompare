@@ -45,7 +45,7 @@ updateSpatial_sing <- function(Wtrip,
   ##### center within samples
   for(sLevel in levels(sample)){
     s <- sample == sLevel
-    phi[s] <- phi[s] - mean(phi)[s]
+    phi[s] <- phi[s] - mean(phi[s])
   }
 
 

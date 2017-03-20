@@ -15,7 +15,7 @@ spatialComparison <- function(msset,sample,conditionOfInterest,
   if(is.null(coord)){
     coord <- coord(msset)
   }
-  
+
   print("Initializing spatial components...")
   set.seed(seed) #random seed
 
@@ -157,7 +157,7 @@ for(f in feature){
     x1a <- X1 %*% alpha
     zb <-  rep(0, N)
     gamma <- 1 # initiate condition effect as nonzero
-    tauVar <- rep(1000,numSpatialParams) # spatial variances
+    tauVar <- rep(1,numSpatialParams) # spatial variances
 
 
 #################
