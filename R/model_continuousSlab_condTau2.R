@@ -8,7 +8,7 @@
 #' @export
 #'
 
-spatialComparison_sing <- function(msset,sample,conditionOfInterest,
+spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
                               feature, nsim=5000, burnin = 2500, trace = T,
                               piPrior = .1, seed = 1, logbase2 = F, coord = NULL){
   if(is.null(coord)){
@@ -45,44 +45,50 @@ spatialComparison_sing <- function(msset,sample,conditionOfInterest,
   ####################################################################################################
   ############## Obtain neighborhood matrices for each combination of sample and condition ###########
   ####################################################################################################
-numSpatialParams <- 1 #number of spatial parameters to estimate. this will be the number unique of conditions being compared
+numSpatialParams <- 2 #number of spatial parameters to estimate. this will be the number unique of conditions being compared
+  nsl <- c(sum(conditionVec == 0), sum(conditionVec == 1)) ##### vector of number of pixels from each condition
+  names(nsl) <- conditionNames
+  j <- 1
 
-
+    for(l in conditionNames){
+      ind_cond <- conditionOfInterest == l #pixels from condition l
 
         #####################################################
         ##################### Initialize W ##################
         #####################################################
         #### Create adjacency matrix for pixels from this condition
-       W <- adj.grid(coord)+0
+        assign(paste("W",  l, sep="_"), adj.grid(coord[ind_cond,])+0)
         #### number of neighbors for each pixel
-        m_adj <- rowSums(W)
+        assign(paste("m",  l, sep="_"), rowSums(get(paste("W",  l, sep="_"))))
         ##### number of pixels from this condition and sample pair
 
 
         ###################  ###################  ###################
         ####### Stuff for CARBayes
 
-        Wtrip <-  triplet(as.spam(W))
-        Wtrip <-  cbind(Wtrip$indices, Wtrip$values)
-        Temp <-  array(NA, c(N, 2))
+        assign(paste("Wtrip", l, sep="_"), triplet(as.spam(get(paste("W", l, sep="_")))))
+        assign(paste("Wtrip", l, sep="_"), cbind(get(paste("Wtrip", l, sep="_"))$indices, get(paste("Wtrip", l, sep="_"))$values))
+        Temp <-  array(NA, c(nsl[j], 2))
         temp <- 1
 
 
 
-        for(i in 1:N)
+        for(i in 1:nsl[j])
         {
-          Temp[i, ] <- c(temp, (temp + m_adj[i]-1))
-          temp <- temp + m_adj[i]
+          Temp[i, ] <- c(temp, (temp + get(paste("m", l, sep="_"))[i]-1))
+          temp <- temp + get(paste("m", l, sep="_"))[i]
         }
 
-        Wbegfin <- Temp
+        assign(paste("Wbegfin", l, sep="_"), Temp)
         rm(Temp)
 
 
 
         #####################################################
         #####################################################
+        j <- j+1
 
+    }
 
 
 
@@ -232,27 +238,35 @@ numSpatialParams <- 1 #number of spatial parameters to estimate. this will be th
         ########### Update the spatial effects ##################
         #########################################################
 
+        j <- 1
+          for(l in conditionNames){
+            ind_cond <- conditionOfInterest == l
 
-              phiUpdate <- updateSpatial_sing(
-                Wtrip=Wtrip,
-                Wbegfin=Wbegfin,
-                m = m_adj,
-                nsl= N,
-                phiVec=phiVec_m, #
-                tau2=tauVar, #
+
+              offset <- offset.phi[ind_cond]
+
+              phiUpdate <- updateSpatial_condT2(
+                Wtrip=get(paste("Wtrip", l, sep="_")),
+                Wbegfin=get(paste("Wbegfin", l, sep="_")),
+                m = get(paste("m", l, sep="_")),
+                nsl= nsl[j],
+                phiVec=phiVec_m[ind_cond], #
+                tau2=tauVar[j], #
                 rho=1,
                 eps_m.var =eps_m.var,
-                offset.phi =offset.phi,
+                offset.phi =offset,
                 tauVar.a = .001,
                 tauVar.b = .001,
-                sample = sample
+                sample = sample[ind_cond]
               )
 
 
 
-              phiVec_m<- phiUpdate$phi
-              spVar[i,1] <- tauVar <- phiUpdate$tau2
+              phiVec_m[ind_cond] <- phiUpdate$phi
+              spVar[i,j] <- tauVar[j] <- phiUpdate$tau2
+              j <- j+1
 
+          }
 
 
         #########################################################
