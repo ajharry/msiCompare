@@ -62,15 +62,19 @@ pData(simSet)$diagnosis <- diagnosis
 
 spectra(simSet)[,simSet$diagnosis == "Healthy"] <- spectra(simSet)[,simSet$diagnosis == "Healthy"] + diff
 
-if(sampleVar > 0){
-  sampleEffect <- rnorm(numSample,mean = 0,sd = sqrt(sampleVar))
-}else{
-  sampleEffect <- rep(0, numSample)
-}
+
+
 
 for(i in 1:numSample){
   sam <- sampleNames(simSet)[i]
-  spectra(simSet)[,simSet$sample == sam] <- spectra(simSet)[,simSet$sample == sam] + sampleEffect[i]
+
+  if(sampleVar > 0){
+  spectra(simSet)[,simSet$sample == sam] <- apply(spectra(simSet)[,simSet$sample == sam,drop=F],1,
+                                                  function(s){
+                                                    sampEff <-rnorm(1, mean = 0, sd = sqrt(sampleVar))
+                                                    s+sampEff
+                                                  })
+  }
 }
 
 return(list(simSet = simSet,

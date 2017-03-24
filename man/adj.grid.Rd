@@ -4,14 +4,14 @@
 \alias{adj.grid}
 \title{Find adjacency matrix}
 \usage{
-adj.grid(coords, order = 1, spam = F)
+adj.grid(coords, max.dist = NULL, radius = 1, spam = F, type = "radius")
 }
 \arguments{
 \item{coords}{data frame of x, y coordinates}
 
-\item{order}{order of neighborhood}
-
 \item{spam}{save as sparse matrix?}
+
+\item{order}{order of neighborhood}
 }
 \value{
 Adjacency matrix

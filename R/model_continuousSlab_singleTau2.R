@@ -10,7 +10,8 @@
 
 spatialComparison_sing <- function(msset,sample,conditionOfInterest,
                               feature, nsim=5000, burnin = 2500, trace = T,
-                              piPrior = .1, seed = 1, logbase2 = F, coord = NULL){
+                              piPrior = .1, seed = 1, logbase2 = F, coord = NULL,
+                              type.neighbor = "radius", radius.neighbor = 1, maxdist.neighbor = NULL){
   if(is.null(coord)){
     coord <- coord(msset)
   }
@@ -53,7 +54,10 @@ numSpatialParams <- 1 #number of spatial parameters to estimate. this will be th
         ##################### Initialize W ##################
         #####################################################
         #### Create adjacency matrix for pixels from this condition
-       W <- adj.grid(coord)+0
+       W <- adj.grid(coords = coord, 
+                     type = type.neighbor, 
+                     radius = radius.neighbor, 
+                     max.dist = maxdist.neighbor)+0
         #### number of neighbors for each pixel
         m_adj <- rowSums(W)
         ##### number of pixels from this condition and sample pair
