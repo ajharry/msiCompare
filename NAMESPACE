@@ -3,6 +3,7 @@
 export(BFDRhat)
 export(adj.grid)
 export(cass)
+export(initializeSpatial)
 export(p_averaging)
 export(sampleCAR)
 export(simMulti)
