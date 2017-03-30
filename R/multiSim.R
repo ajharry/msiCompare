@@ -69,11 +69,11 @@ for(i in 1:numSample){
   sam <- sampleNames(simSet)[i]
 
   if(sampleVar > 0){
-  spectra(simSet)[,simSet$sample == sam] <- apply(spectra(simSet)[,simSet$sample == sam,drop=F],1,
+  spectra(simSet)[,simSet$sample == sam] <- t(apply(spectra(simSet)[,simSet$sample == sam,drop=F],1,
                                                   function(s){
                                                     sampEff <-rnorm(1, mean = 0, sd = sqrt(sampleVar))
                                                     s+sampEff
-                                                  })
+                                                  }))
   }
 }
 
