@@ -8,28 +8,47 @@
 #' @export
 #'
 
-spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
-                                     feature, nsim=5000, burnin = 2500, trace = T,
-                                     piPrior = .1, seed = 1, logbase2 = F, coord = NULL,
-                                     type.neighbor = "radius", radius.neighbor = 1, maxdist.neighbor = NULL,
-                                     spInit = NULL){
+spatialComparison_condT2nest <- function(msset,conditionOfInterest,
+                                         feature, nsim=5000, burnin = 2500, trace = T,
+                                         piPrior = .1, seed = 1, logbase2 = F, coord = NULL,
+                                         type.neighbor = "radius", radius.neighbor = 1, maxdist.neighbor = NULL,
+                                         spInit = NULL,
+                                         bioRep = NULL,
+                                         techRep){
+  set.seed(seed) #random seed
+
   if(is.null(coord)){
     coord <- coord(msset)
   }
 
 
-  set.seed(seed) #random seed
 
-  sample <- factor(sample) # make the sample labels a factor in case it is a character vector
+
+
+
   conditionOfInterest <- factor(conditionOfInterest) # make the condition labels a factor in case it is a character vector
-  sampleNames <- levels(sample) #create vector of sample names
   conditionNames <- levels(conditionOfInterest) #create vector of condition names
   nCond <- length(conditionNames) #how many conditions there are
 
-  N <- length(sample) # how many pixels there are
-  nis <- sapply(sampleNames, function(x) sum(sample == x)) #how many pixels in each sample
-  n <- length(sampleNames) #now many samples there are
-  id <- as.numeric(sample) #convert sample names into id numbers
+
+
+  techRep <- factor(techRep) #factor with different levels for each tissue (like "sample" before)
+  n_tec <- length(levels(techRep)) #the number of distinct tissues
+  nis_tec <- sapply(levels(techRep), function(x) sum(techRep == x)) #number of pixels in each tissue
+
+  if(!is.null(bioRep)){
+    bioRep <- factor(bioRep) #factor with different levels for each biological unit
+    n_bio <- length(levels(bioRep)) #the number of distinct biological units
+    nis_bio <- sapply(levels(bioRep), function(x) sum(bioRep == x)) #number of pixels in each biological unit
+  }
+
+
+
+
+
+
+
+  N <- nrow(coord) # how many pixels there are
 
   #### ONLY IF THERE ARE TWO CONDITIONS #####
   conditionVec <- ifelse(conditionOfInterest == conditionNames[1], 0, 1) #vector converts condition names from characters to numeric
@@ -55,11 +74,11 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
   if(is.null(spInit)){
     print("Initializing spatial components...")
     sptime <- system.time({
-  spInit <- initializeSpatial(conditionNames= conditionNames, conditionOfInterest = conditionOfInterest,
-                              coord = coord, type.neighbor = type.neighbor, radius.neighbor = radius.neighbor,
-                              maxdist.neighbor = maxdist.neighbor, nsl = nsl)
+      spInit <- initializeSpatial(conditionNames= conditionNames, conditionOfInterest = conditionOfInterest,
+                                  coord = coord, type.neighbor = type.neighbor, radius.neighbor = radius.neighbor,
+                                  maxdist.neighbor = maxdist.neighbor, nsl = nsl)
     })
-  print(paste0("...Initialization done in ", sptime['elapsed'], " seconds."))
+    print(paste0("...Initialization done in ", sptime['elapsed'], " seconds."))
   }else{
     print("Spatial components provided, no need for initialization.")
   }
@@ -103,7 +122,7 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
       beta0<-rep(0,k)			# Prior Mean for beta
       prec0<-diag(.01,k)		# Prior Precision Matrix of beta (vague), independent
       precAlpha0 <- .01 #Prior Precision of slab (value of condition effect if it is not zero)
-      d0<-g0<-.001			# Hyperpriors for tau, taub
+      d0<-g0<-.001			# Hyperpriors for tau, taubio, tautec
       rd <- .00001 # ratio of varSpike/varSlab
 
 
@@ -115,15 +134,18 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
       coef <- coef(lm)[-2]
       tau<-1				# technical error precision
       eps_m.var <- 1/tau #technical error variance
-      b<-rep(0,n)			# Random effects (int and slope)
-      taub<-1				# Random Effects precision
+      if(!is.null(bioRep)) b_bio <-rep(0,n_bio)			# Random effects bio unit
+      b_tec <-rep(0,n_tec)			# Random effects tech unit (sample/tissue)
+      tau_bio <- tau_tec<-1				# Random Effects precision
       beta <- coef[1:k] #initial value of intercept and covariates
       alpha <- coef[k+1] #initial value of condition effect
-      Z<-as.spam(matrix(0,N,n))	# Random effect design used for updating b
-      for (i in 1:n) Z[id==i,i]<-1
+      if(!is.null(bioRep)) Z_bio<-as.spam(matrix(0,N,n_bio))	# Random effect design used for updating b_bio
+      Z_tec<-as.spam(matrix(0,N,n_tec))	# Random effect design used for updating b_tec
+      if(!is.null(bioRep)){ for(i in 1:n_bio){Z_bio[as.numeric(bioRep)==i,i]<-1}}
+      for(i in 1:n_tec) Z_tec[as.numeric(techRep)==i,i]<-1
       xb <-  X%*%beta
       x1a <- X1 %*% alpha
-      zb <-  rep(0, N)
+      zb_bio <- zb_tec <-  rep(0, N)
       gamma <- 1 # initiate condition effect as nonzero
       tauVar <- rep(1,numSpatialParams) # spatial variances
 
@@ -134,16 +156,17 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
 
       Betas<-matrix(0,nsim,k)	# Fixed Effects
       spVar<-matrix(0,nsim,numSpatialParams)
-      taus<-taubs<-gammas <- rep(0,nsim)
+      taus<- taus_tec<-gammas <- rep(0,nsim)
+      if(!is.null(bioRep)) taus_bio <- rep(0,nsim)
       Condition <- Condition0 <- Condition1 <- rep(NA,nsim)	# Error Precision Parms
 
       ###############################
       # Fixed Posterior Hyperparms 	#
-      #    for tau and taub		#
+      #    for tau and taubio tautech		#
       ###############################
       d<-d0+N/2
-      nu<-d0+n/2
-
+      if(!is.null(bioRep)) nu_bio<-d0+n_bio/2
+      nu_tec<-d0+n_tec/2
 
       ####################################################################################################
       ######################################## THE GIBBS SAMPLER  ########################################
@@ -152,13 +175,13 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
 
         # Update intercept and covariates
         vbeta<-solve(prec0+tau*crossprod(X,X))
-        mbeta<-vbeta%*%(prec0%*%beta0 + tau*crossprod(X,y-x1a-zb-phiVec_m))
+        mbeta<-vbeta%*%(prec0%*%beta0 + tau*crossprod(X,y-x1a-zb_bio-zb_tec-phiVec_m))
         beta <-c(rmvnorm(1,mbeta,vbeta))
         xb <-  X%*%beta
         Betas[i,]<- beta
 
 
-        resa <- sum((y-xb-zb-phiVec_m)[conditionVec == 1]) #residuals for pixels in second condition onlt
+        resa <- sum((y-xb-zb_bio-zb_tec-phiVec_m)[conditionVec == 1]) #residuals for pixels in second condition onlt
 
         # Update Condition effect
         if(gamma == 1){ #this is the estimate if the condition effect is not zero
@@ -184,36 +207,48 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
         gammas[i] <-gamma
 
 
-        if(n > 1){
-          # Update the sample-to-sample effect
-          vb<-1/(taub+nis*tau)
-          mb<-vb*(tau*t(Z)%*%(y-x1a-xb-phiVec_m))
-          b<-rnorm(n,mb,sqrt(vb))
+        if(!is.null(bioRep)){
+          # Update the biological Replicate effect
+          vb_bio<-1/(tau_bio+nis_bio*tau)
+          mb_bio<-vb_bio*(tau*t(Z_bio)%*%(y-x1a-xb-zb_tec-phiVec_m))
+          b_bio<-rnorm(n_bio,mb_bio,sqrt(vb_bio))
+          zb_bio<-Z_bio%*%b_bio
+        }else{
+          zb_bio <- rep(0, N)
         }
+
+        if(n_tec > 1){
+          vb_tec<-1/(tau_tec+nis_tec*tau)
+          mb_tec<-vb_tec*(tau*t(Z_tec)%*%(y-x1a-xb-zb_bio-phiVec_m))
+          b_tec<-rnorm(n_tec,mb_tec,sqrt(vb_tec))
+          zb_tec<-Z_tec%*%b_tec
+        }else{
+          zb_tec <- rep(0, N)
+        }
+
 
 
 
         # Update the technical error precision
-        if(n > 1){
-          zb<-Z%*%b
-        }else{
-          zb <- rep(0, N)
-        }
 
-        g<-g0+crossprod(y-xb-x1a-zb-phiVec_m,y-xb-x1a-zb-phiVec_m)/2
+        g<-g0+crossprod(y-xb-x1a-zb_bio-zb_tec-phiVec_m,y-xb-x1a-zb_bio-zb_tec-phiVec_m)/2
         taus[i]<-tau<-rgamma(1,d,g)
         eps_m.var <- 1/tau
 
-        if(n > 1){
-          # Update the precision of the sample effect
-          m<-c(g0+crossprod(b,b)/2)
-          taubs[i]<-taub<-rgamma(1,nu,m)
+        if(n_tec > 1){
+          # Update the precision of the technical replicate effect
+          m_tec<-c(g0+crossprod(b_tec,b_tec)/2)
+          taus_tec[i]<-tau_tec<-rgamma(1,nu_tec,m_tec)
         }else{
-          taubs[i]<-taub<- NA
+          taus_tec[i]<-tau_tec<- NA
         }
 
+        if(!is.null(bioRep)){
+          m_bio<-c(g0+crossprod(b_bio,b_bio)/2)
+          taus_bio[i]<-tau_bio<-rgamma(1,nu_bio,m_bio)
+        }
 
-        offset.phi <- (y-xb-x1a-zb) / eps_m.var
+        offset.phi <- (y-xb-x1a-zb_bio-zb_tec) / eps_m.var
 
         #########################################################
         ########### Update the spatial effects ##################
@@ -238,7 +273,7 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
             offset.phi =offset,
             tauVar.a = .001,
             tauVar.b = .001,
-            sample = sample[ind_cond]
+            sample = techRep[ind_cond]
           )
 
 
@@ -262,11 +297,17 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
 
       mbeta<-apply(Betas[(burnin):nsim,, drop = F],2,mean)
       msigma.e2<-mean(1/taus[(burnin):nsim])
-      if(n > 1){
-        msigma.b2<-mean(1/taubs[(burnin):nsim])
+      if(!is.null(bioRep)){
+        msigma.b2_bio<-mean(1/taus_bio[(burnin):nsim])
       }else{
-        msigma.b2<- NA
+        msigma.b2_bio <- NA
       }
+      if(n_tec >1){
+        msigma.b2_tec<-mean(1/taus_tec[(burnin):nsim])
+      }else{
+        msigma.b2_tec<- NA
+      }
+
       msigma.t2<-apply(spVar[(burnin):nsim,, drop = F],2,mean)
       gam <- mean(gammas)
       malpha <- mean(Condition[burnin:nsim])
@@ -276,14 +317,15 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
     }) #time
 
 
-    if(trace){
+    if(trace & !is.null(bioRep)){
       res[[feat]] <-list(
         beta = mbeta,
         cond = malpha,
         cond0 = malpha0,
         cond1 = malpha1,
         sig2 = msigma.e2,
-        sig2b = msigma.b2,
+        sig2bio = msigma.b2_bio,
+        sig2tec = msigma.b2_tec,
         tau2 = msigma.t2,
         gamma = gam,
         beta_trace = Betas,
@@ -291,7 +333,28 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
         cond1_trace = Condition1,
         cond0_trace = Condition0,
         sig2_trace = 1/taus,
-        sig2b_trace = 1/taubs,
+        sig2bio_trace = 1/taus_bio,
+        sig2tec_trace = 1/taus_tec,
+        tau2_trace = spVar,
+        gamma_trace = gammas,
+        time = time
+      )
+    }else if(trace & is.null(bioRep)){
+      res[[feat]] <-list(
+        beta = mbeta,
+        cond = malpha,
+        cond0 = malpha0,
+        cond1 = malpha1,
+        sig2 = msigma.e2,
+        sig2tec = msigma.b2_tec,
+        tau2 = msigma.t2,
+        gamma = gam,
+        beta_trace = Betas,
+        cond_trace = Condition,
+        cond1_trace = Condition1,
+        cond0_trace = Condition0,
+        sig2_trace = 1/taus,
+        sig2tec_trace = 1/taus_tec,
         tau2_trace = spVar,
         gamma_trace = gammas,
         time = time
@@ -303,7 +366,8 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
         cond0 = malpha0,
         cond1 = malpha1,
         sig2 = msigma.e2,
-        sig2b = msigma.b2,
+        sig2bio = msigma.b2_bio,
+        sig2tec = msigma.b2_tec,
         tau2 = msigma.t2,
         gamma = gam,
         time = time
