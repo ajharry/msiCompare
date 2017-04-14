@@ -27,7 +27,7 @@ for(l in conditionNames){
                                            type = type.neighbor,
                                            radius = radius.neighbor,
                                            max.dist = maxdist.neighbor,
-                                           sample = sample[ind_cond,])+0)
+                                           sample = sample[ind_cond])+0)
   #### number of neighbors for each pixel
   m[[j]] <- rowSums(get(paste("W",  l, sep="_")))
   names(m)[j] <- paste("m",  l, sep="_")

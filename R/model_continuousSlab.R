@@ -72,7 +72,7 @@ spatialComparison <- function(msset,sample,conditionOfInterest,
                                                    type = type.neighbor,
                                                    radius = radius.neighbor,
                                                    max.dist = maxdist.neighbor,
-                                                   sample = sample[ind_cond & ind_samp,])+0)
+                                                   sample = sample[ind_cond & ind_samp])+0)
         #### number of neighbors for each pixel
         assign(paste("m", s, l, sep="_"), rowSums(get(paste("W", s, l, sep="_"))))
         ##### number of pixels from this condition and sample pair

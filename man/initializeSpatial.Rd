@@ -5,7 +5,7 @@
 \title{initSpatial}
 \usage{
 initializeSpatial(conditionNames, conditionOfInterest, coord, type.neighbor,
-  radius.neighbor, maxdist.neighbor, nsl)
+  radius.neighbor, maxdist.neighbor, nsl, sample)
 }
 \arguments{
 \item{conditionNames}{condnames}
