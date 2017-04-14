@@ -54,10 +54,11 @@ numSpatialParams <- 1 #number of spatial parameters to estimate. this will be th
         ##################### Initialize W ##################
         #####################################################
         #### Create adjacency matrix for pixels from this condition
-       W <- adj.grid(coords = coord, 
-                     type = type.neighbor, 
-                     radius = radius.neighbor, 
-                     max.dist = maxdist.neighbor)+0
+       W <- adj.grid(coords = coord,
+                     type = type.neighbor,
+                     radius = radius.neighbor,
+                     max.dist = maxdist.neighbor,
+                     sample = sample)+0
         #### number of neighbors for each pixel
         m_adj <- rowSums(W)
         ##### number of pixels from this condition and sample pair

@@ -8,7 +8,7 @@
 
 initializeSpatial <- function(conditionNames, conditionOfInterest,
                               coord, type.neighbor, radius.neighbor, maxdist.neighbor,
-                              nsl){
+                              nsl, sample){
 
 j <- 1
 
@@ -26,7 +26,8 @@ for(l in conditionNames){
   assign(paste("W",  l, sep="_"), adj.grid(coords = coord[ind_cond,],
                                            type = type.neighbor,
                                            radius = radius.neighbor,
-                                           max.dist = maxdist.neighbor)+0)
+                                           max.dist = maxdist.neighbor,
+                                           sample = sample[ind_cond,])+0)
   #### number of neighbors for each pixel
   m[[j]] <- rowSums(get(paste("W",  l, sep="_")))
   names(m)[j] <- paste("m",  l, sep="_")

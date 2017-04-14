@@ -13,7 +13,7 @@ spatialComparison <- function(msset,sample,conditionOfInterest,
                               feature, nsim=5000, burnin = 2500, trace = T,
                               piPrior = .1, seed = 1, logbase2 = F, coord = NULL,
                               type.neighbor = "radius", radius.neighbor = 1, maxdist.neighbor = NULL){
-  
+
   if(is.null(coord)){
     coord <- coord(msset)
   }
@@ -69,9 +69,10 @@ spatialComparison <- function(msset,sample,conditionOfInterest,
         #####################################################
         #### Create adjacency matrix for pixels from this condition and sample pair
         assign(paste("W", s, l, sep="_"), adj.grid(coords = coord[ind_cond & ind_samp,],
-                                                   type = type.neighbor, 
-                                                   radius = radius.neighbor, 
-                                                   max.dist = maxdist.neighbor)+0)
+                                                   type = type.neighbor,
+                                                   radius = radius.neighbor,
+                                                   max.dist = maxdist.neighbor,
+                                                   sample = sample[ind_cond & ind_samp,])+0)
         #### number of neighbors for each pixel
         assign(paste("m", s, l, sep="_"), rowSums(get(paste("W", s, l, sep="_"))))
         ##### number of pixels from this condition and sample pair

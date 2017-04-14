@@ -57,7 +57,8 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
     sptime <- system.time({
   spInit <- initializeSpatial(conditionNames= conditionNames, conditionOfInterest = conditionOfInterest,
                               coord = coord, type.neighbor = type.neighbor, radius.neighbor = radius.neighbor,
-                              maxdist.neighbor = maxdist.neighbor, nsl = nsl)
+                              maxdist.neighbor = maxdist.neighbor, nsl = nsl,
+                              sample = sample)
     })
   print(paste0("...Initialization done in ", sptime['elapsed'], " seconds."))
   }else{

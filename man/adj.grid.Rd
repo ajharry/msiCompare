@@ -4,7 +4,8 @@
 \alias{adj.grid}
 \title{Find adjacency matrix}
 \usage{
-adj.grid(coords, max.dist = NULL, radius = 1, spam = F, type = "radius")
+adj.grid(coords, max.dist = NULL, radius = 1, spam = F, type = "radius",
+  sample)
 }
 \arguments{
 \item{coords}{data frame of x, y coordinates}
