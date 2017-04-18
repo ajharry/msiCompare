@@ -29,11 +29,13 @@
 
 sampleCAR <- function(condDiff, coord = expand.grid(x=1:10, y=1:10),
                       pattern = ifelse((coords$x %in% 3:8 & coords$y %in% 3:8), 2, 1),
-                      sig2, tau2, rho = .9999, nrep=100, save = F, randomSeed = 1){
+                      sig2, tau2, rho = .9999, nrep=100, save = F, randomSeed = 1,
+                      neighbor.type = "radius", radius = 1){
 
             set.seed(randomSeed)
 
-            W <- adj.grid(coord)
+            W <- adj.grid(coord, sample= factor(rep(1, nrow(coord))),
+                          type = neighbor.type, radius = radius)
             n <- nrow(W)
             m <- rowSums(W)
             Wstd <- diag(1/m)%*%W
