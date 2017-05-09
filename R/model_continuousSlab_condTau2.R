@@ -85,14 +85,14 @@ spatialComparison_condT2 <- function(msset,sample,conditionOfInterest,
   ####################################################################################################
   ##################################### Fit model feature by feature #################################
   ####################################################################################################
-
+  minNonZero <- min(spectra(msset)[spectra(msset) != 0])/100
   for(f in feature){
     print(paste0("Feature ", f, " of ", length(feature)))
     time <- system.time({ #time the overall model fits
       y <- spectra(msset)[f,]
 
       if(logbase2){ #do log transformation if necessary
-        y[y==0] <- .001 #zeros in the image will cause problems if a log transformation is required. add a small number to the zeroes.
+        y[y==0] <- minNonZero  #zeros in the image will cause problems if a log transformation is required. add a small number to the zeroes.
         y <- log2(y)
       }
 
