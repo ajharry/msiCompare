@@ -239,13 +239,13 @@ for (i in 1:nsim) { #this is an iterative method, nsim is the number of iteratio
     zb <- rep(0, N)
   }
   g<-g0+crossprod(y-xb-x1a-zb-phiVec_m,y-xb-x1a-zb-phiVec_m)/2
-  taus[i]<-tau<-rgamma(1,d,g)
+  taus[i]<-tau<-rgamma(1,shape = d,rate = g)
   eps_m.var <- 1/tau
 
   if(n > 1){
     # Update the precision of the sample effect
     m<-c(g0+crossprod(b,b)/2)
-    taubs[i]<-taub<-rgamma(1,nu,m)
+    taubs[i]<-taub<-rgamma(1,shape = nu,rate = m)
   }else{
     taubs[i]<-taub<- NA
   }
