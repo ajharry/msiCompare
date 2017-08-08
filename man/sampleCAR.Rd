@@ -2,11 +2,11 @@
 % Please edit documentation in R/SampleProperCAR.R
 \name{sampleCAR}
 \alias{sampleCAR}
-\title{sample car}
+\title{sample car2}
 \usage{
 sampleCAR(condDiff, coord = expand.grid(x = 1:10, y = 1:10),
-  pattern = ifelse((coords$x \%in\% 3:8 & coords$y \%in\% 3:8), 2, 1), sig2,
-  tau2, rho = 0.9999, nrep = 100, save = F, randomSeed = 1)
+  pattern = rep(1, 100), sig2, tau2, rho = 0.9999, nrep = 100, save = F,
+  randomSeed = 1, neighbor.type = "radius", radius = 1)
 }
 \arguments{
 \item{tau2}{safaf}
