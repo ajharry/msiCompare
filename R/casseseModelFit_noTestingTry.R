@@ -50,6 +50,9 @@ pvals = c()
 morans_i = c()
 morans_pvals = c()
 aics = c()
+sigma2 = c()
+intercept = c()
+condeffect = c()
 # create distance matrix (caution: can become very big: O=f(n*n))
 Euclid_distance=dist(xy)
 Eucl_mat=as.matrix(Euclid_distance)
@@ -79,8 +82,13 @@ for(threshold in thresholds) {
       z1 = summary(z)
       pvals = c(pvals, z1$Coef[8])
       aics = c(aics,AIC(z1))
-
+      intercept = c(intercept, z1$Coef[1])
+      condeffect = c(condeffect, z1$Coef[2])
+      sigma2 = c(sigma2, z$fit$s2)
     }else{
+      sigma2 = c(sigma2, NA)
+      intercept = c(intercept, NA)
+      condeffect = c(condeffect, NA)
       pvals = c(pvals, NA)
       aics = c(aics,NA)
     }
@@ -103,6 +111,9 @@ return(list = list(aics = aics,
                 morans_i = morans_i,
                 morans_pvals = morans_pvals,
                 pvals = pvals,
-                padj_ttestpvals = padj_ttestpvals))
+                padj_ttestpvals = padj_ttestpvals,
+                sigma2 = sigma2,
+                cond = condeffect,
+                intercept = intercept))
 }
 
