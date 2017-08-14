@@ -30,7 +30,7 @@
 sampleCAR <- function(condDiff, coord = expand.grid(x=1:10, y=1:10),
                       pattern = rep(1, 100),
                       sig2, tau2, rho = .9999, nrep=100, save = F, randomSeed = 1,
-                      neighbor.type = "radius", radius = 1){
+                      neighbor.type = "radius", radius = 1, center.pattern = F){
 
   set.seed(randomSeed)
 
@@ -51,8 +51,12 @@ sampleCAR <- function(condDiff, coord = expand.grid(x=1:10, y=1:10),
   for(i in 1:nrep){
     # Spatial Random Effects +  # Measurement error + # Condition Effect
     sp <- c(rmvnorm(1,sigma=Sigma))
+    if(center.pattern){
     for(q in levels(pattern)){
       sp[pattern == q] <- sp[pattern == q] - mean(sp[pattern == q])
+    }
+    }else{
+      sp <- sp - mean(sp)
     }
     phisamp[i,] <- sp + rnorm(n, mean = 0, sd = sqrt(sig2))  + ifelse(pattern == 2, condDiff, 0)
   }

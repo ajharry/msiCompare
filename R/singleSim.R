@@ -14,9 +14,12 @@ simSingle <- function(
   sig2 = .1,
   seed = 100,
   size1 = 15,
-  pattern =  ifelse((expand.grid(x=1:size1, y=1:size1)$x %in% (1+floor(size1/5)):(size1-floor(size1/5)) & expand.grid(x=1:size1, y=1:size1)$y %in% (1+floor(size1/5)):(size1-floor(size1/5))), 2, 1)){
+  center.pattern = F,
+  pattern =  ifelse((expand.grid(x=1:size1, y=1:size1)$x %in% (1+floor(size1/5)):(size1-floor(size1/5)) & expand.grid(x=1:size1, y=1:size1)$y %in% (1+floor(size1/5)):(size1-floor(size1/5))), 2, 1)
+  ){
 
   size2 <- size1^2
+
   diagnosis <-  ifelse(pattern == 2, "Healthy", "Disease")
   coord <- expand.grid(x=1:size1, y=1:size1)
 
@@ -26,7 +29,7 @@ simSingle <- function(
                       sig2 = sig2, tau2 = tau2,
                       rho = .9999, nrep=reps,
                       pattern = pattern,
-                      save = F, randomSeed = seed)
+                      save = F, randomSeed = seed, center.pattern = center.pattern)
 
 
 
