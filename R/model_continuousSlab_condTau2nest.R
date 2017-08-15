@@ -310,7 +310,7 @@ spatialComparison_condT2nest <- function(msset,conditionOfInterest,
       }
 
       msigma.t2<-apply(spVar[(burnin):nsim,, drop = F],2,mean)
-      gam <- mean(gammas)
+      gam <- mean(gammas[burnin:nsim])
       malpha <- mean(Condition[burnin:nsim])
       malpha1 <- mean(Condition1[burnin:nsim], na.rm = T)
       malpha0 <- mean(Condition0[burnin:nsim], na.rm = T)

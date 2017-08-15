@@ -308,7 +308,7 @@ msigma.b2<-mean(1/taubs[(burnin):nsim])
   msigma.b2<- NA
 }
 msigma.t2<-apply(spVar[(burnin):nsim,, drop = F],2,mean)
-gam <- mean(gammas)
+gam <- mean(gammas[burnin:nsim])
 malpha <- mean(Condition[burnin:nsim])
 malpha1 <- mean(Condition1[burnin:nsim], na.rm = T)
 malpha0 <- mean(Condition0[burnin:nsim], na.rm = T)
