@@ -5,10 +5,10 @@
 \title{sim single tissue}
 \usage{
 simSingle(reps = 1, diff = log2(1.5), tau2 = 1, sig2 = 0.1,
-  seed = 100, size1 = 15, pattern = ifelse((expand.grid(x = 1:size1, y =
-  1:size1)$x \%in\% (1 + floor(size1/5)):(size1 - floor(size1/5)) &
-  expand.grid(x = 1:size1, y = 1:size1)$y \%in\% (1 + floor(size1/5)):(size1 -
-  floor(size1/5))), 2, 1))
+  seed = 100, size1 = 15, center.pattern = F,
+  pattern = ifelse((expand.grid(x = 1:size1, y = 1:size1)$x \%in\% (1 +
+  floor(size1/5)):(size1 - floor(size1/5)) & expand.grid(x = 1:size1, y =
+  1:size1)$y \%in\% (1 + floor(size1/5)):(size1 - floor(size1/5))), 2, 1))
 }
 \arguments{
 \item{tau2}{asfasdf}

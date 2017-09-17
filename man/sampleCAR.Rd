@@ -6,7 +6,8 @@
 \usage{
 sampleCAR(condDiff, coord = expand.grid(x = 1:10, y = 1:10),
   pattern = rep(1, 100), sig2, tau2, rho = 0.9999, nrep = 100, save = F,
-  randomSeed = 1, neighbor.type = "radius", radius = 1)
+  randomSeed = 1, neighbor.type = "radius", radius = 1,
+  center.pattern = F)
 }
 \arguments{
 \item{tau2}{safaf}
