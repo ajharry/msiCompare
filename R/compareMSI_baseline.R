@@ -14,7 +14,13 @@ compareMSI2 <- function(msset,conditionOfInterest,
                        type.neighbor = "radius", radius.neighbor = 1, maxdist.neighbor = NULL,
                        spInit = NULL,
                        bioRep = NULL,
-                       techRep){
+                       techRep,
+                       beta0 = 0, # Prior Mean for beta, only allow intercept
+                       prec0 = .01, # Prior Precision Matrix of beta (vague)  (only allow intercept)
+                       precAlpha0 = .01, #Prior Precision of slab (value of condition effect if it is not zero)
+                       d0=.001, g0=.001,			# Hyperpriors for tau, taubio, tautec
+                       rd = .00001 # ratio of varSpike/varSlab
+){
   set.seed(seed) #random seed
 
   if(is.null(coord)){
@@ -108,21 +114,6 @@ compareMSI2 <- function(msset,conditionOfInterest,
       }
 
 
-
-      ####################################################################################################
-      ################################### Set up prior distributions #####################################
-      ####################################################################################################
-      #beta0<-rep(0,k)			# Prior Mean for beta
-      #prec0<-diag(.01,k)		# Prior Precision Matrix of beta (vague), independent
-
-     ######## simplified, only allow intercept ##########
-      beta0 <- 0 # Prior Mean for beta, only allow intercept
-      prec0 <- .01 # Prior Precision Matrix of beta (vague)  (only allow intercept)
-    ######################################################
-
-      precAlpha0 <- .01 #Prior Precision of slab (value of condition effect if it is not zero)
-      d0<-g0<-.001			# Hyperpriors for tau, taubio, tautec
-      rd <- .00001 # ratio of varSpike/varSlab
 
 
       ####################################################################################################
@@ -240,7 +231,8 @@ compareMSI2 <- function(msset,conditionOfInterest,
 
         # Update the technical error precision
 
-        g<-g0+crossprod(y-xb-x1a-zb_bio-zb_tec-phiVec_m,y-xb-x1a-zb_bio-zb_tec-phiVec_m)/2
+        g<-g0+crossprod(y-xb-x1a-zb_bio-zb_tec-phiVec_m,
+                        y-xb-x1a-zb_bio-zb_tec-phiVec_m)/2
         taus[i]<-tau<-rgamma(1,d,g)
         eps_m.var <- 1/tau
 

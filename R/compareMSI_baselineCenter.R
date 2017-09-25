@@ -8,28 +8,24 @@
 #' @export
 #'
 
-compareMSI <- function(msset,conditionOfInterest,
-                                         feature, nsim=5000, burnin = 2500, trace = T,
-                                         piPrior = .1, seed = 1, logbase2 = F, coord = NULL,
-                                         type.neighbor = "radius", radius.neighbor = 1, maxdist.neighbor = NULL,
-                                         spInit = NULL,
-                                         bioRep = NULL,
-                                         techRep,
-                       beta0=rep(0,1),			# Prior Mean for beta #should actually be rep(0,k) but k is not an input/always 1 for now
-                       prec0=diag(.01,1),		# Prior Precision Matrix of beta (vague), independent #should actually be rep(0,k) but k is not an input/always 1 for now
+compareMSI3 <- function(msset,conditionOfInterest,
+                       feature, nsim=5000, burnin = 2500, trace = T,
+                       piPrior = .1, seed = 1, logbase2 = F, coord = NULL,
+                       type.neighbor = "radius", radius.neighbor = 1, maxdist.neighbor = NULL,
+                       spInit = NULL,
+                       bioRep = NULL,
+                       techRep,
+                       beta0 = 0, # Prior Mean for beta, only allow intercept
+                       prec0 = .01, # Prior Precision Matrix of beta (vague)  (only allow intercept)
                        precAlpha0 = .01, #Prior Precision of slab (value of condition effect if it is not zero)
                        d0=.001, g0=.001,			# Hyperpriors for tau, taubio, tautec
-                       rd = .00001) # ratio of varSpike/varSlab)
-{
+                       rd = .0001 # ratio of varSpike/varSlab
+){
   set.seed(seed) #random seed
 
   if(is.null(coord)){
     coord <- coord(msset)
   }
-
-
-
-
 
 
   conditionOfInterest <- factor(conditionOfInterest) # make the condition labels a factor in case it is a character vector
@@ -49,16 +45,12 @@ compareMSI <- function(msset,conditionOfInterest,
   }
 
 
-
-
-
-
-
   N <- nrow(coord) # how many pixels there are
 
   #### ONLY IF THERE ARE TWO CONDITIONS #####
   conditionVec <- ifelse(conditionOfInterest == conditionNames[1], 0, 1) #vector converts condition names from characters to numeric
   numCond2 <- sum(conditionVec == 1) #number of pixels from condition two
+  numCond1 <- sum(conditionVec == 0) #number of pixels from condition 1
   ###########################################
 
   X <- matrix(rep(1, N), ncol = 1) #design matrix for intercept and covariates #currently set to intercept only
@@ -143,8 +135,8 @@ compareMSI <- function(msset,conditionOfInterest,
       for(i in 1:n_tec) Z_tec[as.numeric(techRep)==i,i]<-1
       xb <-  X%*%beta
       x1a <- X1 %*% alpha
-      zb_bio <- zb_tec <-  rep(0, N)
-      gamma <- 1 # initiate condition effect as nonzero
+      zb_bio <- zb_tec <-zb_tec_centered <- zb_bio_centered <-  rep(0, N)
+      gamma <- 0 # initiate condition effect as nonzero
       tauVar <- rep(1,numSpatialParams) # spatial variances
 
 
@@ -154,7 +146,7 @@ compareMSI <- function(msset,conditionOfInterest,
 
       Betas<-matrix(0,nsim,k)	# Fixed Effects
       spVar<-matrix(0,nsim,numSpatialParams)
-      taus<- taus_tec<-gammas <- rep(0,nsim)
+      taus<- taus_tec<-gammas <- pi1Posts<- rep(0,nsim)
       if(!is.null(bioRep)) taus_bio <- rep(0,nsim)
       Condition <- Condition0 <- Condition1 <- rep(NA,nsim)	# Error Precision Parms
 
@@ -171,15 +163,25 @@ compareMSI <- function(msset,conditionOfInterest,
       ####################################################################################################
       for (i in 1:nsim) { #this is an iterative method, nsim is the number of iterations
 
-        # Update intercept and covariates
-        vbeta<-solve(prec0+tau*crossprod(X,X))
-        mbeta<-vbeta%*%(prec0%*%beta0 + tau*crossprod(X,y-x1a-zb_bio-zb_tec-phiVec_m))
-        beta <-c(rmvnorm(1,mbeta,vbeta))
-        xb <-  X%*%beta
+        ######## Less General, only allow intercept, but assuring baseline constraint ####################
+        resbeta <- sum((y-x1a-zb_bio-zb_tec_centered-phiVec_m)[conditionVec == 0]) #residuals for pixels in first condition only
+
+        vbeta<- 1/(prec0+numCond1/eps_m.var)
+        mbeta<-vbeta*(prec0*beta0 + resbeta/eps_m.var)
+        beta <- rnorm(n=1, mean = mbeta, sd = sqrt(vbeta))
+        xb <-  X*beta
         Betas[i,]<- beta
 
 
-        resa <- sum((y-xb-zb_bio-zb_tec-phiVec_m)[conditionVec == 1]) #residuals for pixels in second condition onlt
+        # Update intercept and covariates
+        # vbeta<-solve(prec0+tau*crossprod(X,X))
+        # mbeta<-vbeta%*%(prec0%*%beta0 + tau*crossprod(X,y-x1a-zb_bio-zb_tec-phiVec_m))
+        # beta <-c(rmvnorm(1,mbeta,vbeta))
+        # xb <-  X%*%beta
+        # Betas[i,]<- beta
+
+
+        resa <- sum((y-xb-zb_bio-zb_tec_centered-phiVec_m)[conditionVec == 1]) #residuals for pixels in second condition onlt
 
         # Update Condition effect
         if(gamma == 1){ #this is the estimate if the condition effect is not zero
@@ -198,7 +200,7 @@ compareMSI <- function(msset,conditionOfInterest,
         # update indicator of differential abundance
         loglik_slab <- dnorm(alpha, mean = 0, sd = sqrt(1/precAlpha0), log = T)
         loglik_spike <- dnorm(alpha, mean = 0 , sd = sqrt(rd/precAlpha0), log = T)
-        pi1Post <-  1/(1 + exp(loglik_spike - loglik_slab)*(1-piPrior)/piPrior )
+        pi1Posts[i] <- pi1Post <-  1/(1 + exp(loglik_spike - loglik_slab)*(1-piPrior)/piPrior )
 
 
         gamma <- rbinom(n=1, size = 1, prob = pi1Post)
@@ -220,8 +222,9 @@ compareMSI <- function(msset,conditionOfInterest,
           mb_tec<-vb_tec*(tau*t(Z_tec)%*%(y-x1a-xb-zb_bio-phiVec_m))
           b_tec<-rnorm(n_tec,mb_tec,sqrt(vb_tec))
           zb_tec<-Z_tec%*%b_tec
+          zb_tec_centered<-Z_tec%*%(b_tec-mean(b_tec))
         }else{
-          zb_tec <- rep(0, N)
+          zb_tec <- zb_tec_centered<-rep(0, N)
         }
 
 
@@ -308,6 +311,7 @@ compareMSI <- function(msset,conditionOfInterest,
       }
 
       msigma.t2<-apply(spVar[(burnin):nsim,, drop = F],2,mean)
+      p1 <- mean(pi1Posts[burnin:nsim])
       gam <- mean(gammas[burnin:nsim])
       malpha <- mean(Condition[burnin:nsim])
       malpha1 <- mean(Condition1[burnin:nsim], na.rm = T)
@@ -326,6 +330,7 @@ compareMSI <- function(msset,conditionOfInterest,
         sig2bio = msigma.b2_bio,
         sig2tec = msigma.b2_tec,
         tau2 = msigma.t2,
+        pi1 = p1,
         gamma = gam,
         beta_trace = Betas,
         cond_trace = Condition,
@@ -336,6 +341,7 @@ compareMSI <- function(msset,conditionOfInterest,
         sig2tec_trace = 1/taus_tec,
         tau2_trace = spVar,
         gamma_trace = gammas,
+        p1_trace = pi1Posts,
         time = time
       )
     }else if(trace & is.null(bioRep)){
@@ -347,6 +353,7 @@ compareMSI <- function(msset,conditionOfInterest,
         sig2 = msigma.e2,
         sig2tec = msigma.b2_tec,
         tau2 = msigma.t2,
+        pi1 = p1,
         gamma = gam,
         beta_trace = Betas,
         cond_trace = Condition,
@@ -356,6 +363,7 @@ compareMSI <- function(msset,conditionOfInterest,
         sig2tec_trace = 1/taus_tec,
         tau2_trace = spVar,
         gamma_trace = gammas,
+        p1_trace = pi1Posts,
         time = time
       )
     }else{
@@ -368,6 +376,7 @@ compareMSI <- function(msset,conditionOfInterest,
         sig2bio = msigma.b2_bio,
         sig2tec = msigma.b2_tec,
         tau2 = msigma.t2,
+        pi1 = p1,
         gamma = gam,
         time = time
       )
