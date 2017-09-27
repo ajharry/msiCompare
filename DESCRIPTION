@@ -9,6 +9,7 @@ License: GPL-2
 Encoding: UTF-8
 LazyData: true
 Imports: 
+  coda,
   spam,
   spdep,
   mvtnorm,

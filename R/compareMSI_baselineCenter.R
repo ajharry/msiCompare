@@ -5,6 +5,7 @@
 #' @import mvtnorm
 #' @import lme4
 #' @import spam
+#' @import coda
 #' @export
 #'
 
@@ -332,16 +333,17 @@ compareMSI3 <- function(msset,conditionOfInterest,
         tau2 = msigma.t2,
         pi1 = p1,
         gamma = gam,
-        beta_trace = Betas,
+        trace = mcmc(cbind(beta_trace = c(Betas),
         cond_trace = Condition,
         cond1_trace = Condition1,
         cond0_trace = Condition0,
         sig2_trace = 1/taus,
         sig2bio_trace = 1/taus_bio,
         sig2tec_trace = 1/taus_tec,
-        tau2_trace = spVar,
+        tau2_trace1 = spVar[,1],
+        tau2_trace2 = spVar[,2],
         gamma_trace = gammas,
-        p1_trace = pi1Posts,
+        p1_trace = pi1Posts)),
         time = time
       )
     }else if(trace & is.null(bioRep)){
@@ -355,15 +357,16 @@ compareMSI3 <- function(msset,conditionOfInterest,
         tau2 = msigma.t2,
         pi1 = p1,
         gamma = gam,
-        beta_trace = Betas,
+        trace = mcmc(cbind(beta_trace = c(Betas),
         cond_trace = Condition,
         cond1_trace = Condition1,
         cond0_trace = Condition0,
         sig2_trace = 1/taus,
         sig2tec_trace = 1/taus_tec,
-        tau2_trace = spVar,
+        tau2_trace1 = spVar[,1],
+        tau2_trace2 = spVar[,2],
         gamma_trace = gammas,
-        p1_trace = pi1Posts,
+        p1_trace = pi1Posts)),
         time = time
       )
     }else{
