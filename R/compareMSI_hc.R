@@ -159,7 +159,7 @@ compareMSI_hc <- function(msset,conditionOfInterest,
       tau<-1				# technical error precision
       eps_m.var <- 1/tau #technical error variance
 
-      tau_bio <- tau_tec<-1				# Random Effects precision
+      tau_tec<-1				# Random Effects precision
       beta <- coef[1:k] #initial value of intercept and covariates
       alpha <- coef[k+1] #initial value of condition effect
       b_tec <- rep(0, numTissueCond1+numTissueCond2)
@@ -168,7 +168,7 @@ compareMSI_hc <- function(msset,conditionOfInterest,
       for(i in 1:n_tec) Z_tec[as.numeric(techRep)==i,i]<-1
       xb <-  X%*%beta
       x1a <- X1 %*% alpha
-      zb_bio <- zb_tec <-  rep(0, N)
+      zb_tec <-  rep(0, N)
       gamma <- 1 # initiate condition effect as nonzero
       tauVar <- rep(1,numSpatialParams) # spatial variances
 
@@ -184,7 +184,7 @@ compareMSI_hc <- function(msset,conditionOfInterest,
 
       ###############################
       # Fixed Posterior Hyperparms 	#
-      #    for tau and taubio tautech		#
+      #    for tau and tautech		#
       ###############################
       d<-d0+N/2
       nu_tec<-d0+n_tec/2
@@ -200,7 +200,7 @@ compareMSI_hc <- function(msset,conditionOfInterest,
         for(sc in 1:nrow(sampCond)){
             ncs <- sampCond$numPix[sc]
             vb_tec <- 1/(ncs/eps_m.var + tau_tec)
-            mb_tec <-vb_tec*(((beta+alpha*sampCond$condition)*tau_tec) + (sum((y-phiVec_m)[conditionVec == sampCond$condition[sc] &
+            mb_tec <-vb_tec*(((beta+alpha*sampCond$condition[sc])*tau_tec) + (sum((y-phiVec_m)[conditionVec == sampCond$condition[sc] &
                                                                                              techRep == sampCond$sample[sc]])/eps_m.var))
             b_tec[sc2] <- rnorm(1,mean = mb_tec, sd = sqrt(vb_tec))
 
@@ -231,7 +231,7 @@ compareMSI_hc <- function(msset,conditionOfInterest,
           Condition1[i] <- alpha <- rnorm(n = 1, mean = malph, sd = sqrt(valph))
         }else{ #this is the estimate if the condition effect is zero (or very close to it)
           valph <- 1/(numTissueCond2*tau_tec + 1/rd * precAlpha0)
-          malph <- valph*(0*precAlpha0 + resa*tau_tec)
+          malph <- valph*(0*(1/rd)*precAlpha0 + resa*tau_tec)
           Condition0[i] <- alpha <- rnorm(n = 1, mean = malph, sd = sqrt(valph))
         }
         x1a <- X1*alpha
@@ -349,7 +349,6 @@ compareMSI_hc <- function(msset,conditionOfInterest,
         cond0 = malpha0,
         cond1 = malpha1,
         sig2 = msigma.e2,
-        sig2bio = msigma.b2_bio,
         sig2tec = msigma.b2_tec,
         tau2 = msigma.t2,
         gamma = gam,
