@@ -314,6 +314,28 @@ compareMSI <- function(msset,conditionOfInterest,
       malpha1 <- mean(Condition1[burnin:nsim], na.rm = T)
       malpha0 <- mean(Condition0[burnin:nsim], na.rm = T)
 
+      if(trace & !is.null(bioRep)){
+      ess <- effectiveSize(mcmc(cbind(beta_trace = c(Betas)[burnin:nsim],
+                        cond_trace = Condition[burnin:nsim],
+                        cond1_trace = Condition1[burnin:nsim],
+                        cond0_trace = Condition0[burnin:nsim],
+                        sig2_trace = 1/taus[burnin:nsim],
+                        sig2tec_trace = 1/taus_tec[burnin:nsim],
+                        sig2bio_trace = 1/taus_bio[burnin:nsim],
+                        tau2_trace1 = spVar[burnin:nsim,1],
+                        tau2_trace2 = spVar[burnin:nsim,2],
+                        gamma_trace = gammas[burnin:nsim])))
+      }else{
+        ess <- effectiveSize(mcmc(cbind(beta_trace = c(Betas)[burnin:nsim],
+                          cond_trace = Condition[burnin:nsim],
+                          cond1_trace = Condition1[burnin:nsim],
+                          cond0_trace = Condition0[burnin:nsim],
+                          sig2_trace = 1/taus[burnin:nsim],
+                          sig2tec_trace = 1/taus_tec[burnin:nsim],
+                          tau2_trace1 = spVar[burnin:nsim,1],
+                          tau2_trace2 = spVar[burnin:nsim,2],
+                          gamma_trace = gammas[burnin:nsim])))
+      }
     }) #time
 
 
@@ -328,6 +350,7 @@ compareMSI <- function(msset,conditionOfInterest,
         sig2tec = msigma.b2_tec,
         tau2 = msigma.t2,
         gamma = gam,
+        ess = ess,
         trace = mcmc(cbind(beta_trace = c(Betas),
         cond_trace = Condition,
         cond1_trace = Condition1,
@@ -350,6 +373,7 @@ compareMSI <- function(msset,conditionOfInterest,
         sig2tec = msigma.b2_tec,
         tau2 = msigma.t2,
         gamma = gam,
+        ess = ess,
         trace = mcmc(cbind(beta_trace = c(Betas),
         cond_trace = Condition,
         cond1_trace = Condition1,
@@ -372,6 +396,7 @@ compareMSI <- function(msset,conditionOfInterest,
         sig2tec = msigma.b2_tec,
         tau2 = msigma.t2,
         gamma = gam,
+        ess = ess,
         time = time
       )
     }
