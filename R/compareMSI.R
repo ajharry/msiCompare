@@ -10,27 +10,23 @@
 #'
 
 compareMSI <- function(msset,conditionOfInterest,
-                                         feature, nsim=5000, burnin = 2500, trace = T,
-                                         piPrior = .1, seed = 1, logbase2 = F, coord = NULL,
-                                         type.neighbor = "radius", radius.neighbor = 1, maxdist.neighbor = NULL,
-                                         spInit = NULL,
-                                         bioRep = NULL,
-                                         techRep,
-                       beta0=rep(0,1),			# Prior Mean for beta #should actually be rep(0,k) but k is not an input/always 1 for now
-                       prec0=diag(.01,1),		# Prior Precision Matrix of beta (vague), independent #should actually be rep(0,k) but k is not an input/always 1 for now
-                       precAlpha0 = .01, #Prior Precision of slab (value of condition effect if it is not zero)
-                       d0=.001, g0=.001,			# Hyperpriors for tau, taubio, tautec
-                       rd = .00001) # ratio of varSpike/varSlab)
-{
+                        feature, nsim=5000, burnin = 2500, trace = T,
+                        piPrior = .1, seed = 1, logbase2 = F, coord = NULL,
+                        type.neighbor = "radius", radius.neighbor = 1, maxdist.neighbor = NULL,
+                        spInit = NULL,
+                        bioRep = NULL,
+                        techRep,
+                        beta0 = 0, # Prior Mean for beta, only allow intercept
+                        prec0 = .01, # Prior Precision Matrix of beta (vague)  (only allow intercept)
+                        precAlpha0 = .01, #Prior Precision of slab (value of condition effect if it is not zero)
+                        d0=.001, g0=.001,			# Hyperpriors for tau, taubio, tautec
+                        rd = .00001 # ratio of varSpike/varSlab
+){
   set.seed(seed) #random seed
 
   if(is.null(coord)){
     coord <- coord(msset)
   }
-
-
-
-
 
 
   conditionOfInterest <- factor(conditionOfInterest) # make the condition labels a factor in case it is a character vector
@@ -50,16 +46,12 @@ compareMSI <- function(msset,conditionOfInterest,
   }
 
 
-
-
-
-
-
   N <- nrow(coord) # how many pixels there are
 
   #### ONLY IF THERE ARE TWO CONDITIONS #####
   conditionVec <- ifelse(conditionOfInterest == conditionNames[1], 0, 1) #vector converts condition names from characters to numeric
   numCond2 <- sum(conditionVec == 1) #number of pixels from condition two
+  numCond1 <- sum(conditionVec == 0) #number of pixels from condition 1
   ###########################################
 
   X <- matrix(rep(1, N), ncol = 1) #design matrix for intercept and covariates #currently set to intercept only
@@ -172,12 +164,22 @@ compareMSI <- function(msset,conditionOfInterest,
       ####################################################################################################
       for (i in 1:nsim) { #this is an iterative method, nsim is the number of iterations
 
-        # Update intercept and covariates
-        vbeta<-solve(prec0+tau*crossprod(X,X))
-        mbeta<-vbeta%*%(prec0%*%beta0 + tau*crossprod(X,y-x1a-zb_bio-zb_tec-phiVec_m))
-        beta <-c(rmvnorm(1,mbeta,vbeta))
-        xb <-  X%*%beta
+        ######## Less General, only allow intercept, but assuring baseline constraint ####################
+        resbeta <- sum((y-x1a-zb_bio-zb_tec-phiVec_m)[conditionVec == 0]) #residuals for pixels in first condition only
+
+        vbeta<- 1/(prec0+numCond1/eps_m.var)
+        mbeta<-vbeta*(prec0*beta0 + resbeta/eps_m.var)
+        beta <- rnorm(n=1, mean = mbeta, sd = sqrt(vbeta))
+        xb <-  X*beta
         Betas[i,]<- beta
+
+
+        # Update intercept and covariates
+        # vbeta<-solve(prec0+tau*crossprod(X,X))
+        # mbeta<-vbeta%*%(prec0%*%beta0 + tau*crossprod(X,y-x1a-zb_bio-zb_tec-phiVec_m))
+        # beta <-c(rmvnorm(1,mbeta,vbeta))
+        # xb <-  X%*%beta
+        # Betas[i,]<- beta
 
 
         resa <- sum((y-xb-zb_bio-zb_tec-phiVec_m)[conditionVec == 1]) #residuals for pixels in second condition onlt
@@ -314,28 +316,35 @@ compareMSI <- function(msset,conditionOfInterest,
       malpha1 <- mean(Condition1[burnin:nsim], na.rm = T)
       malpha0 <- mean(Condition0[burnin:nsim], na.rm = T)
 
+
       if(trace & !is.null(bioRep)){
-      ess <- effectiveSize(mcmc(cbind(beta_trace = c(Betas)[burnin:nsim],
-                        cond_trace = Condition[burnin:nsim],
-                        cond1_trace = Condition1[burnin:nsim],
-                        cond0_trace = Condition0[burnin:nsim],
-                        sig2_trace = 1/taus[burnin:nsim],
-                        sig2tec_trace = 1/taus_tec[burnin:nsim],
-                        sig2bio_trace = 1/taus_bio[burnin:nsim],
-                        tau2_trace1 = spVar[burnin:nsim,1],
-                        tau2_trace2 = spVar[burnin:nsim,2],
-                        gamma_trace = gammas[burnin:nsim])))
-      }else{
         ess <- effectiveSize(mcmc(cbind(beta_trace = c(Betas)[burnin:nsim],
-                          cond_trace = Condition[burnin:nsim],
-                          cond1_trace = Condition1[burnin:nsim],
-                          cond0_trace = Condition0[burnin:nsim],
-                          sig2_trace = 1/taus[burnin:nsim],
-                          sig2tec_trace = 1/taus_tec[burnin:nsim],
-                          tau2_trace1 = spVar[burnin:nsim,1],
-                          tau2_trace2 = spVar[burnin:nsim,2],
-                          gamma_trace = gammas[burnin:nsim])))
+                                        cond_trace = Condition[burnin:nsim],
+                                        sig2_trace = 1/taus[burnin:nsim],
+                                        sig2tec_trace = 1/taus_tec[burnin:nsim],
+                                        sig2bio_trace = 1/taus_bio[burnin:nsim],
+                                        tau2_trace1 = spVar[burnin:nsim,1],
+                                        tau2_trace2 = spVar[burnin:nsim,2],
+                                        gamma_trace = gammas[burnin:nsim])))
+      }else{
+        if(n_tec > 1){
+        ess <- effectiveSize(mcmc(cbind(beta_trace = c(Betas)[burnin:nsim],
+                                        cond_trace = Condition[burnin:nsim],
+                                        sig2_trace = 1/taus[burnin:nsim],
+                                        sig2tec_trace = 1/taus_tec[burnin:nsim],
+                                        tau2_trace1 = spVar[burnin:nsim,1],
+                                        tau2_trace2 = spVar[burnin:nsim,2],
+                                        gamma_trace = gammas[burnin:nsim])))
+        }else{
+          ess <- effectiveSize(mcmc(cbind(beta_trace = c(Betas)[burnin:nsim],
+                                          cond_trace = Condition[burnin:nsim],
+                                          sig2_trace = 1/taus[burnin:nsim],
+                                          tau2_trace1 = spVar[burnin:nsim,1],
+                                          tau2_trace2 = spVar[burnin:nsim,2],
+                                          gamma_trace = gammas[burnin:nsim])))
+        }
       }
+
     }) #time
 
 
@@ -352,15 +361,13 @@ compareMSI <- function(msset,conditionOfInterest,
         gamma = gam,
         ess = ess,
         trace = mcmc(cbind(beta_trace = c(Betas),
-        cond_trace = Condition,
-        cond1_trace = Condition1,
-        cond0_trace = Condition0,
-        sig2_trace = 1/taus,
-        sig2bio_trace = 1/taus_bio,
-        sig2tec_trace = 1/taus_tec,
-        tau2_trace1 = spVar[,1],
-        tau2_trace2 = spVar[,2],
-        gamma_trace = gammas)),
+                           cond_trace = Condition,
+                           sig2_trace = 1/taus,
+                           sig2bio_trace = 1/taus_bio,
+                           sig2tec_trace = 1/taus_tec,
+                           tau2_trace1 = spVar[,1],
+                           tau2_trace2 = spVar[,2],
+                           gamma_trace = gammas)),
         time = time
       )
     }else if(trace & is.null(bioRep)){
@@ -375,14 +382,12 @@ compareMSI <- function(msset,conditionOfInterest,
         gamma = gam,
         ess = ess,
         trace = mcmc(cbind(beta_trace = c(Betas),
-        cond_trace = Condition,
-        cond1_trace = Condition1,
-        cond0_trace = Condition0,
-        sig2_trace = 1/taus,
-        sig2tec_trace = 1/taus_tec,
-        tau2_trace1 = spVar[,1],
-        tau2_trace2 = spVar[,2],
-        gamma_trace = gammas)),
+                           cond_trace = Condition,
+                           sig2_trace = 1/taus,
+                           sig2tec_trace = 1/taus_tec,
+                           tau2_trace1 = spVar[,1],
+                           tau2_trace2 = spVar[,2],
+                           gamma_trace = gammas)),
         time = time
       )
     }else{

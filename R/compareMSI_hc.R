@@ -321,8 +321,6 @@ compareMSI_hc <- function(msset,conditionOfInterest,
 
         ess <- effectiveSize(mcmc(cbind(beta_trace = c(Betas)[burnin:nsim],
                           cond_trace = Condition[burnin:nsim],
-                          cond1_trace = Condition1[burnin:nsim],
-                          cond0_trace = Condition0[burnin:nsim],
                           sig2_trace = 1/taus[burnin:nsim],
                           sig2tec_trace = 1/taus_tec[burnin:nsim],
                           tau2_trace1 = spVar[burnin:nsim,1],
