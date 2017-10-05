@@ -1,6 +1,27 @@
-#' @title fit model
-#' @description fit model
-#' @param msset adfdf
+#' @title Fit hiearchical spatial model to MSI data
+#' @description compareMSI is used to fit a hiearchical Bayesian spatial model to MSI data using a Gibbs Sampler MCMC approach. The model is fit separately for each m/z feature.
+#' @param msset an object of class "MSImageSet"
+#' @param conditionOfInterest a vector or factor giving the level of the condition of interest for each pixel in msset
+#' @param feature the index of the m/z features for which the model should be fit
+#' @param nsim number of desired MCMC samples
+#' @param burnin number of MCMC samples to discard
+#' @param trace logical, should the full list of MCMC samples be returned for each variable?
+#' @param piPrior prior probability of differential abundance
+#' @param seed random seed
+#' @param logbase2 logical, should the intensities be log transformed?
+#' @param coord data fram of coordinates of the MSImageSet, with columns 'x' and 'y'
+#' @param type.neighbor neighborhood type (see adj.grid)
+#' @param radius.neighbor desired neighborhood radius if neighborhood type 'radius' is selected (see adj.grid)
+#' @param maxdist.neighbor maximum distance for locations to be considered neighbors if neighborhood type 'max.dist' is selected (see adj.grid)
+#' @param spInit optional, provide precomputed spatial information from output of intializeSpatial
+#' @param bioRep optional, vector or factor giving the individual/donor to which pixel in the msset belongs
+#' @param techRep vector or factor giving the tissue to which each pixel in the msset belongs
+#' @param beta0 prior mean of baseline effect
+#' @param prec0 prior variance of baseline effect
+#' @param precAlpha0 prior mean of condition 2 effect
+#' @param d0 shape parameter of hyperprior of variances
+#' @param g0 scale parameter of hyperprior of variances
+#' @param rd ratio of spike variance to slab variance for condition 2 effect
 #' @return res
 #' @import mvtnorm
 #' @import lme4
@@ -22,7 +43,28 @@ compareMSI <- function(msset,conditionOfInterest,
                         d0=.001, g0=.001,			# Hyperpriors for tau, taubio, tautec
                         rd = .00001 # ratio of varSpike/varSlab
 ){
-  set.seed(seed) #random seed
+
+  techRep <- factor(techRep) #factor with different levels for each tissue (like "sample" before)
+  n_tec <- length(levels(techRep)) #the number of distinct tissues
+  nis_tec <- sapply(levels(techRep), function(x) sum(techRep == x)) #number of pixels in each tissue
+
+  if(n_tec > 1 & is.null(bioRep)){ #do hiearchical centering for multi tissue experiments (only those without subsampling for now)
+    return(compareMSI_hc(msset,conditionOfInterest,
+                      feature, nsim, burnin, trace,
+                      piPrior, seed, logbase2, coord,
+                      type.neighbor, radius.neighbor, maxdist.neighbor,
+                      spInit,
+                      bioRep,
+                      techRep,
+                      beta0, # Prior Mean for beta, only allow intercept
+                      prec0, # Prior Precision Matrix of beta (vague)  (only allow intercept)
+                      precAlpha0, #Prior Precision of slab (value of condition effect if it is not zero)
+                      d0, g0,			# Hyperpriors for tau, taubio, tautec
+                      rd # ratio of varSpike/varSlab
+    ))
+  }
+
+   set.seed(seed) #random seed
 
   if(is.null(coord)){
     coord <- coord(msset)
@@ -35,9 +77,6 @@ compareMSI <- function(msset,conditionOfInterest,
 
 
 
-  techRep <- factor(techRep) #factor with different levels for each tissue (like "sample" before)
-  n_tec <- length(levels(techRep)) #the number of distinct tissues
-  nis_tec <- sapply(levels(techRep), function(x) sum(techRep == x)) #number of pixels in each tissue
 
   if(!is.null(bioRep)){
     bioRep <- factor(bioRep) #factor with different levels for each biological unit
