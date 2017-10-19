@@ -70,7 +70,7 @@ updateSpatial_condT2 <- function(Wtrip,
     tau2 <- 1 / rgamma(1, tauVar.a+nsl/2, rate = tau2.posterior.scale)
 
   }else{#improper
-    tau2 <- 1 / rgamma(1, tauVar.a+(nsl-1)/2, rate = tau2.posterior.scale)
+    tau2 <- 1 / rgamma(1, tauVar.a+(nsl-length(levels(sample)))/2, rate = tau2.posterior.scale)
   }
 
   return(list(phi = phi, tau2 = tau2))
