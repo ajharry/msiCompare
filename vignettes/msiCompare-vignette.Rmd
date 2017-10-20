@@ -1,0 +1,39 @@
+---
+title: "msiCompare--A package for class comparison for mass spectrometry imaging data"
+author: "April J Harry"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{msiCompare--A package for class comparison for mass spectrometry imaging data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+# Introduction
+
+*Purpose
+*Meant to work with cardinal
+*this is a demonstration of functionality
+
+# Simulating MS images
+
+*demonstrate both single and multi simulations with arbitrary coordinates
+*consider working this in with cardinals spectra simulation
+```{r, fig.show='hold'}
+plot(1:10)
+plot(10:1)
+```
+
+#Location-wise ANOVA
+*show averaging
+*demonstrate fdr adjustment
+
+#Cassese et al
+*cite
+*show their model
+
+#Hiearchical Bayesian Spatial Model
+* show compareMSI
+*note hiearchical centering
+ v

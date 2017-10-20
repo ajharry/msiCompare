@@ -8,7 +8,7 @@ Description: Class comparison for Mass Spectrometry Imaging Experiments
 License: GPL-2
 Encoding: UTF-8
 LazyData: true
-Imports: 
+Imports:
   coda,
   spam,
   spdep,
@@ -17,3 +17,6 @@ Imports:
   lmerTest,
   Cardinal
 RoxygenNote: 6.0.1
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr
