@@ -5,7 +5,7 @@
 \title{update spatial vector}
 \usage{
 updateSpatial_condT2(Wtrip, Wbegfin, m, nsl, phiVec, tau2, rho = 1, eps_m.var,
-  offset.phi, tauVar.a, tauVar.b, proper = F, sample)
+  offset.phi, tauVar.a, tauVar.b, proper = F, sample, islands = NULL)
 }
 \arguments{
 \item{Wtrip}{adfadfa}

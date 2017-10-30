@@ -17,12 +17,15 @@ updateSpatial_condT2 <- function(Wtrip,
                                tauVar.a,
                                tauVar.b,
                                proper = F,
-                               sample){
+                               sample,
+                               islands = NULL){
   ###################  ###################  ###################
   ########  get update of spatial effects
   ###################  ###################  ###################
 
-  sample <- factor(sample)
+  if(is.null(islands)){islands <- sample}
+
+  islands <- factor(islands)
 
   ###### Debugging ######
   #phiVecold <- phiVec_m
@@ -42,12 +45,11 @@ updateSpatial_condT2 <- function(Wtrip,
   )
 
 
-  ##### center within samples
-  for(sLevel in levels(sample)){
-    s <- sample == sLevel
+  ##### center within samples and islands
+  for(isle in levels(islands)){
+    s <- (islands == isle)
     phi[s] <- phi[s] - mean(phi[s])
   }
-
 
   ###################  ###################  ###################
   ######### get update of spatial effects variance
@@ -70,7 +72,7 @@ updateSpatial_condT2 <- function(Wtrip,
     tau2 <- 1 / rgamma(1, tauVar.a+nsl/2, rate = tau2.posterior.scale)
 
   }else{#improper
-    tau2 <- 1 / rgamma(1, tauVar.a+(nsl-length(levels(sample)))/2, rate = tau2.posterior.scale)
+    tau2 <- 1 / rgamma(1, tauVar.a+(nsl-length(levels(islands)))/2, rate = tau2.posterior.scale)
   }
 
   return(list(phi = phi, tau2 = tau2))

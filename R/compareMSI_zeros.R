@@ -30,7 +30,7 @@
 #' @export
 #'
 
-compareMSI_hc_sub <- function(msset,conditionOfInterest,
+compareMSI_zeros <- function(msset,conditionOfInterest,
                           feature, nsim=5000, burnin = 2500, trace = T,
                           piPrior = .1, seed = 1, logbase2 = F, coord = NULL,
                           type.neighbor = "radius", radius.neighbor = 1, maxdist.neighbor = NULL,
@@ -41,12 +41,31 @@ compareMSI_hc_sub <- function(msset,conditionOfInterest,
                           prec0 = .01, # Prior Precision Matrix of beta (vague)  (only allow intercept)
                           precAlpha0 = .01, #Prior Precision of slab (value of condition effect if it is not zero)
                           d0=.001, g0=.001,			# Hyperpriors for tau, taubio, tautec
-                          rd = .00001 # ratio of varSpike/varSlab
+                          rd = .00001, # ratio of varSpike/varSlab
+                          dropZeros = T #should we treat zeros as missing values?
 ){
 
   techRep <- factor(techRep) #factor with different levels for each tissue (like "sample" before)
   n_tec <- length(levels(techRep)) #the number of distinct tissues
   nis_tec <- sapply(levels(techRep), function(x) sum(techRep == x)) #number of pixels in each tissue
+
+
+  if(n_tec == 1){
+    return(compareMSI_zerosSingle(msset,conditionOfInterest,
+                      feature, nsim, burnin, trace,
+                      piPrior, seed, logbase2, coord,
+                      type.neighbor, radius.neighbor, maxdist.neighbor,
+                      spInit,
+                      bioRep,
+                      techRep,
+                      beta0, # Prior Mean for beta, only allow intercept
+                      prec0, # Prior Precision Matrix of beta (vague)  (only allow intercept)
+                      precAlpha0, #Prior Precision of slab (value of condition effect if it is not zero)
+                      d0, g0,			# Hyperpriors for tau, taubio, tautec
+                      rd, # ratio of varSpike/varSlab
+                      dropZero = T
+    ))
+  }
 
 
   set.seed(seed) #random seed
@@ -112,6 +131,14 @@ compareMSI_hc_sub <- function(msset,conditionOfInterest,
   rm(spInit)
 
 
+  ####### check for islands of unconnected pixels within tissues
+  W <- adj.grid(coord, sample = techRep)+0
+  W.list<- mat2listw(W)
+  W.nb <- W.list$neighbours
+  W.islands <- n.comp.nb(W.nb)
+  islands <- W.islands$comp.id
+  rm(W, W.list, W.nb, W.islands)
+
   ####################################################################################################
   ####################################################################################################
   ####################################################################################################
@@ -146,15 +173,13 @@ compareMSI_hc_sub <- function(msset,conditionOfInterest,
   ####################################################################################################
   ##################################### Fit model feature by feature #################################
   ####################################################################################################
-  minNonZero <- min(spectra(msset)[spectra(msset) != 0])/100
-  for(f in feature){
+for(f in feature){
     print(paste0("Feature ", f, " of ", length(feature)))
     time <- system.time({ #time the overall model fits
       y <- spectra(msset)[f,]
 
       if(logbase2){ #do log transformation if necessary
-        y[y==0] <- minNonZero  #zeros in the image will cause problems if a log transformation is required. add a small number to the zeroes.
-        y <- log2(y)
+ y <- log2(y)
       }
 
 
@@ -331,7 +356,7 @@ compareMSI_hc_sub <- function(msset,conditionOfInterest,
             tauVar.a = .001,
             tauVar.b = .001,
             sample = techRep[ind_cond],
-            islands = NULL
+            islands = islands[ind_cond]
           )
 
 
