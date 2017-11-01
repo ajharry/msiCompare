@@ -19,8 +19,14 @@
 #' @param beta0 prior mean of baseline effect
 #' @param prec0 prior variance of baseline effect
 #' @param precAlpha0 prior mean of condition 2 effect
-#' @param d0 shape parameter of hyperprior of variances
-#' @param g0 scale parameter of hyperprior of variances
+#' @param a0_eps shape parameter for measurment error precision hyperprior
+#' @param a0_bio shape parameter for biological replicate error precision hyperprior
+#' @param b0_eps scale parameter for measurment error precision hyperprior
+#' @param b0_bio scale parameter for biological replicate error precision hyperprior
+#' @param a0_tec shape parameter for sample to sample error precision hyperprior
+#' @param b0_tec scale parameter for sample to sample error precision hyperprior
+#' @param a0_sp shape parameter for spatial precision hyperprior
+#' @param b0_sp scale parameter for spatial precision hyperprior
 #' @param rd ratio of spike variance to slab variance for condition 2 effect
 #' @return res
 #' @import mvtnorm
@@ -40,7 +46,10 @@ compareMSI_zeros <- function(msset,conditionOfInterest,
                           beta0 = 0, # Prior Mean for beta, only allow intercept
                           prec0 = .01, # Prior Precision Matrix of beta (vague)  (only allow intercept)
                           precAlpha0 = .01, #Prior Precision of slab (value of condition effect if it is not zero)
-                          d0=.001, g0=.001,			# Hyperpriors for tau, taubio, tautec
+                          a0_eps=.001, b0_eps=.001,			# Hyperprior for tau (1/eps.var)
+                          a0_bio=.001, b0_bio=.001,			# Hyperprior for taubio
+                          a0_tec=.001, b0_tec=.001,			# Hyperprior for tautec
+                          a0_sp=.001, b0_sp=.001,			# Hyperprior for tau.spatial
                           rd = .00001, # ratio of varSpike/varSlab
                           dropZeros = T #should we treat zeros as missing values?
 ){
@@ -61,7 +70,10 @@ compareMSI_zeros <- function(msset,conditionOfInterest,
                       beta0, # Prior Mean for beta, only allow intercept
                       prec0, # Prior Precision Matrix of beta (vague)  (only allow intercept)
                       precAlpha0, #Prior Precision of slab (value of condition effect if it is not zero)
-                      d0, g0,			# Hyperpriors for tau, taubio, tautec
+                      a0_eps, b0_eps,			# Hyperprior for tau (1/eps.var)
+                      a0_bio, b0_bio,			# Hyperprior for taubio
+                      a0_tec, b0_tec,			# Hyperprior for tautec
+                      a0_sp, b0_sp,			# Hyperprior for tau.spatial
                       rd, # ratio of varSpike/varSlab
                       dropZero = T
     ))
@@ -225,9 +237,9 @@ for(f in feature){
       # Fixed Posterior Hyperparms 	#
       #    for tau and tautech		#
       ###############################
-      d<-d0+N/2
-      if(!is.null(bioRep)) nu_bio<-d0+n_bio/2
-      nu_tec<-d0+n_tec/2
+      d<-a0_eps+N/2
+      if(!is.null(bioRep)) nu_bio<-a0_bio+n_bio/2
+      nu_tec<-a0_tec+n_tec/2
 
       ####################################################################################################
       ######################################## THE GIBBS SAMPLER  ########################################
@@ -306,7 +318,7 @@ for(f in feature){
 
 
         ################### Second level: measurement error precision ###################
-        g<-g0+crossprod(y-zb_tec-zb_bio-phiVec_m,
+        g<-b0_eps+crossprod(y-zb_tec-zb_bio-phiVec_m,
                         y-zb_tec-zb_bio-phiVec_m)/2
         taus[i]<-tau<-rgamma(1,d,g)
         eps_m.var <- 1/tau
@@ -315,7 +327,7 @@ for(f in feature){
         ################### ------  level: biological var error precision ###################
 
         if(!is.null(bioRep)){
-          m_bio<-c(g0+crossprod(b_bio,b_bio)/2)
+          m_bio<-c(b0_bio+crossprod(b_bio,b_bio)/2)
           taus_bio[i]<-tau_bio<-rgamma(1,nu_bio,m_bio)
         }
 
@@ -323,7 +335,7 @@ for(f in feature){
 
         ################### Third level: sample-to-sample error precision ###################
 
-        m_tec<-c(g0+sum(unique(zb_tec-x1a-xb)^2)/2)
+        m_tec<-c(b0_tec+sum(unique(zb_tec-x1a-xb)^2)/2)
         taus_tec[i]<-tau_tec<-rgamma(1,nu_tec,m_tec)
 
 
@@ -353,8 +365,8 @@ for(f in feature){
             rho=1,
             eps_m.var =eps_m.var,
             offset.phi =offset,
-            tauVar.a = .001,
-            tauVar.b = .001,
+            tauVar.a = a0_sp,
+            tauVar.b = b0_sp,
             sample = techRep[ind_cond],
             islands = islands[ind_cond]
           )

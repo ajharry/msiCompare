@@ -8,8 +8,9 @@ compareMSI(msset, conditionOfInterest, feature, nsim = 5000, burnin = 2500,
   trace = T, piPrior = 0.1, seed = 1, logbase2 = F, coord = NULL,
   type.neighbor = "radius", radius.neighbor = 1, maxdist.neighbor = NULL,
   spInit = NULL, bioRep = NULL, techRep, beta0 = 0, prec0 = 0.01,
-  precAlpha0 = 0.01, d0 = 0.001, g0 = 0.001, rd = 1e-05,
-  dropZeros = F)
+  precAlpha0 = 0.01, a0_eps = 0.001, b0_eps = 0.001, a0_bio = 0.001,
+  b0_bio = 0.001, a0_tec = 0.001, b0_tec = 0.001, a0_sp = 0.001,
+  b0_sp = 0.001, rd = 1e-05, dropZeros = F)
 }
 \arguments{
 \item{msset}{an object of class "MSImageSet"}
@@ -50,9 +51,21 @@ compareMSI(msset, conditionOfInterest, feature, nsim = 5000, burnin = 2500,
 
 \item{precAlpha0}{prior mean of condition 2 effect}
 
-\item{d0}{shape parameter of hyperprior of variances}
+\item{a0_eps}{shape parameter for measurment error precision hyperprior}
 
-\item{g0}{scale parameter of hyperprior of variances}
+\item{b0_eps}{scale parameter for measurment error precision hyperprior}
+
+\item{a0_bio}{shape parameter for biological replicate error precision hyperprior}
+
+\item{b0_bio}{scale parameter for biological replicate error precision hyperprior}
+
+\item{a0_tec}{shape parameter for sample to sample error precision hyperprior}
+
+\item{b0_tec}{scale parameter for sample to sample error precision hyperprior}
+
+\item{a0_sp}{shape parameter for spatial precision hyperprior}
+
+\item{b0_sp}{scale parameter for spatial precision hyperprior}
 
 \item{rd}{ratio of spike variance to slab variance for condition 2 effect}
 }

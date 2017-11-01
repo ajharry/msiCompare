@@ -19,8 +19,14 @@
 #' @param beta0 prior mean of baseline effect
 #' @param prec0 prior variance of baseline effect
 #' @param precAlpha0 prior mean of condition 2 effect
-#' @param d0 shape parameter of hyperprior of variances
-#' @param g0 scale parameter of hyperprior of variances
+#' @param a0_eps shape parameter for measurment error precision hyperprior
+#' @param a0_bio shape parameter for biological replicate error precision hyperprior
+#' @param b0_eps scale parameter for measurment error precision hyperprior
+#' @param b0_bio scale parameter for biological replicate error precision hyperprior
+#' @param a0_tec shape parameter for sample to sample error precision hyperprior
+#' @param b0_tec scale parameter for sample to sample error precision hyperprior
+#' @param a0_sp shape parameter for spatial precision hyperprior
+#' @param b0_sp scale parameter for spatial precision hyperprior
 #' @param rd ratio of spike variance to slab variance for condition 2 effect
 #' @return res
 #' @import mvtnorm
@@ -40,7 +46,10 @@ compareMSI_zerosSingle <- function(msset,conditionOfInterest,
                         beta0 = 0, # Prior Mean for beta, only allow intercept
                         prec0 = .01, # Prior Precision Matrix of beta (vague)  (only allow intercept)
                         precAlpha0 = .01, #Prior Precision of slab (value of condition effect if it is not zero)
-                        d0=.001, g0=.001,			# Hyperpriors for tau, taubio, tautec
+                        a0_eps=.001, b0_eps=.001,			# Hyperprior for tau (1/eps.var)
+                        a0_bio=.001, b0_bio=.001,			# Hyperprior for taubio
+                        a0_tec=.001, b0_tec=.001,			# Hyperprior for tautec
+                        a0_sp=.001, b0_sp=.001,			# Hyperprior for tau.spatial
                         rd = .00001, # ratio of varSpike/varSlab
                        dropZeros = T
 ){
@@ -169,7 +178,7 @@ for(f in feature){
       # Fixed Posterior Hyperparms 	#
       #    	#
       ###############################
-      d<-d0+N/2
+      d<-a0_eps+N/2
 
       ####################################################################################################
       ######################################## THE GIBBS SAMPLER  ########################################
@@ -221,9 +230,9 @@ for(f in feature){
 
 
 
-        # Update the technical error precision
+        # Update the measurment error precision
 
-        g<-g0+crossprod(y-xb-x1a-phiVec_m,
+        g<-b0_eps+crossprod(y-xb-x1a-phiVec_m,
                         y-xb-x1a-phiVec_m)/2
         taus[i]<-tau<-rgamma(1,d,g)
         eps_m.var <- 1/tau
@@ -253,8 +262,8 @@ for(f in feature){
             rho=1,
             eps_m.var =eps_m.var,
             offset.phi =offset,
-            tauVar.a = .001,
-            tauVar.b = .001,
+            tauVar.a = a0_sp,
+            tauVar.b = b0_sp,
             sample = techRep[ind_cond],
             islands = islands[ind_cond]
           )
