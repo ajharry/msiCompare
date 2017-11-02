@@ -4,7 +4,7 @@
 \alias{cass}
 \title{model fitting cassese et al}
 \usage{
-cass(msset, roiFactor, logscale = T, thresholds = 1:10)
+cass(msset, roiFactor, logscale = T, thresholds = 1:10, cutoff = 0.05)
 }
 \arguments{
 \item{msset}{adfaf}

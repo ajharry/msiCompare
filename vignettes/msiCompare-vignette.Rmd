@@ -13,27 +13,94 @@ vignette: >
 # Introduction
 
 *Purpose
-*Meant to work with cardinal
 *this is a demonstration of functionality
+*overview of features and availability
 
-# Simulating MS images
-
-*demonstrate both single and multi simulations with arbitrary coordinates
-*consider working this in with cardinals spectra simulation
-```{r, fig.show='hold'}
-plot(1:10)
-plot(10:1)
+```{r, fig.show='hold',results='hide'}
+library(msiCompare)
 ```
 
-#Location-wise ANOVA
-*show averaging
-*demonstrate fdr adjustment
+# Integration with *Cardinal*
+```{r, fig.show='hold',results='hide'}
+library(Cardinal)
+```
 
-#Cassese et al
+# Simulating MS images
+## Model-based simulation
+
+```{r, fig.show='hold',cache=TRUE}
+conditions <- ifelse((expand.grid(x=1:30, y=1:30)$x %in% (1+floor(30/5)):(30-floor(30/5)) & expand.grid(x=1:30, y=1:30)$y %in% (1+floor(30/5)):(30-floor(30/5))), 2, 1)
+
+ s <- simSingle(
+      reps = 3,
+      diff = log2(1.5),
+      tau2 = 0.1,
+      sig2 = 0.1,
+      seed = 8372,
+      size1 = 30,
+      center.pattern = T,
+      pattern = conditions
+      )
+```
+
+```{r, fig.show='hold'}
+summary(s)
+```
+
+```{r, fig.show='hold'}
+image(s$simSet, feature = 1)
+```
+
+```{r, fig.show='hold',cache=TRUE}
+ s_multi <- simMulti(
+      sampleVar = 0.1,
+      reps = 1,
+      diff = log2(1.5),
+      tau2 = 0.1,
+      sig2 = 0.1,
+      seed = 8372,
+      size1 = 30,
+      size2 = 30^2,
+      numHealthy = 3,
+      numDisease = 3)
+
+image(s_multi$simSet, feature = 1, layout = c(3,2))
+```
+
+# Examples of class comparison
+## Hiearchical Bayesian Spatial Model
+* show compareMSI
+```{r, fig.show='hold',cache=TRUE}
+fitHBSM <- compareMSI(msset = s_multi$simSet,
+           conditionOfInterest = s_multi$simSet$diagnosis,
+           techRep = s_multi$simSet$sample,
+           feature = 1,
+           nsim = 5000, burnin=2500,
+           trace = F, dropZeros = T)
+
+fitHBSM$Feature1$gamma
+```
+*note hiearchical centering
+*bfdr adjustment
+
+
+## Location-wise ANOVA
+```{r, fig.show='hold',cache=TRUE}
+summary(lm(c(spectra(s_multi$simSet)[1,]) ~ s_multi$simSet$diagnosis))
+```
+```{r, fig.show='hold',cache=TRUE}
+p_averaging(s_multi$simSet)
+```
+
+
+## Cassese et al
+```{r, fig.show='hold',cache=TRUE}
+fit_spautolm <- cass(msset = s$simSet, roiFactor = factor(s$simSet$diagnosis),
+     logscale = F, thresholds = 1:5)
+
+fit_spautolm$results$CAR_AIC_min_pvalues
+```
 *cite
 *show their model
 
-#Hiearchical Bayesian Spatial Model
-* show compareMSI
-*note hiearchical centering
- v
+
