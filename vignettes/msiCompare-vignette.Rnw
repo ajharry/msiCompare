@@ -1,0 +1,186 @@
+%\VignetteIndexEntry{msiCompare--Class comparison for mass spectrometry imaging data}
+%\VignetteKeyword{Bioinformatics, Proteomics, MassSpectrometry, ImagingMassSpectrometry}
+
+\documentclass[a4paper]{article} 
+
+
+\title{\texttt{msiCompare}: Class comparison for mass spectrometry imaging data}
+
+\author{April J. Harry}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+<<setup,include=FALSE,cache=FALSE>>=
+library(knitr)
+opts_chunk$set(fig.align='center', fig.show='hold',highlight=FALSE)
+@
+
+\section{Introduction}
+The \texttt{R} package \texttt{msiCompare} was built to provide access to the methods for class comparison in MSI described in this dissertation. \texttt{msiCompare} leverages the tools and data structures in the \texttt{Cardinal} package. When used in combination with \texttt{Cardinal}, it is possible to build a complete workflow from data preprocessing to statistical analysis all within \texttt{R}. In this chapter, we explore the main functionality of \texttt{msiCompare}.
+
+The package is currently managed through a Github repository. The \texttt{devtools} package makes installation straightforward:
+
+<<eval=FALSE>>=
+library(devtools)
+install_github("ajharry/msiCompare")
+@
+
+Once installed, attach both the \texttt{msiCompare} and \texttt{Cardinal} packages.
+<<warning=FALSE,message=FALSE,results='hide'>>=
+library(msiCompare)
+library(Cardinal)
+@
+
+
+\section{Simulating MS images}
+We can simulate MSI data approximately according to Model \ref{model:prop}. For the n=1 situation, begin by defining two regions of interest which will represent the conditions to be compared. In the code below, condition 2 is defined as a square region in the center of a $30\times 30$ grid, while condition 1 is the bordering area.
+<<cache=TRUE>>=
+conditions <- ifelse((expand.grid(x=1:30, y=1:30)$x %in% 
+                        (1+floor(30/5)):(30-floor(30/5)) & 
+                        expand.grid(x=1:30, y=1:30)$y %in% 
+                        (1+floor(30/5)):(30-floor(30/5))), 2, 1)
+@
+
+The following function simulates the MS image. The algorithm works as follows:
+
+\begin{enumerate}
+\item Given a value for the spatial variance \texttt{tau2}, a \texttt{size1} $\times$ \texttt{size1} square grid of samples are drawn from the $properCAR(\rho, \texttt{tau2}, W)$ distribution, with $\rho = 0.9999$ (that is, nearly the $ICAR$ model). The neighborhood matrix $W$ is assumed to be binary with the 8-neighborhood structure. The samples are centered within each condition by default.
+\item (\texttt{size1}$)^2$ independent samples are drawn from $\mathcal{N}$(mean = 0, var = \texttt{sig2}) to represent measurement error, and then added to the spatially correlated samples.
+\item A value of \texttt{diff} is added to the simulated values for locations in condition 2 and zero to values for locations in condition 1.
+\item This process is repeated \texttt{reps} times, with the sampled images returned as a \texttt{Cardinal} \texttt{MSImageSet} object.
+\end{enumerate}
+
+<<cache=TRUE>>=
+ s <- simSingle(
+      reps = 3,
+      diff = log2(1.5),
+      tau2 = 0.1,
+      sig2 = 0.1,
+      seed = 8372,
+      size1 = 30,
+      pattern = conditions
+      )
+summary(s)
+@
+
+Using \texttt{Cardinal} plotting tools, we can view the 3 simulated images.
+<<fig.show='hold',fig.height=4>>=
+image(s$simSet, feature = 1, layout = c(3,1))
+image(s$simSet, feature = 2)
+image(s$simSet, feature = 3)
+@
+
+The specified conditions for each location are included in the \texttt{pixelData} of the \texttt{MSImageSet}.
+
+<<>>=
+head(pixelData(s$simSet))
+@
+
+MSI datasets with $n>1$ are simulated similarly, with \texttt{diff} added to the simulated tissues for one of the conditions. Additionally, a value representing tissue-to-tissue biological variation drawn from $\mathcal{N}$(mean = 0, var = \texttt{sampleVar}) for each tissue and added to its simulated values.
+
+<<cache=TRUE>>=
+ s_multi <- simMulti(
+      sampleVar = 0.1,
+      reps = 1,
+      diff = log2(1.5),
+      tau2 = 0.1,
+      sig2 = 0.1,
+      seed = 8372,
+      size1 = 30,
+      size2 = 30^2,
+      numHealthy = 3,
+      numDisease = 3)
+
+image(s_multi$simSet, feature = 1, layout = c(3,2))
+@
+
+In addition to the condition at each pixel, the sample names are included in the \texttt{pixelData} of the \texttt{MSImageSet}.
+
+<<>>=
+head(pixelData(s_multi$simSet))
+@
+
+
+\section{Statistical methods for class comparison}
+\subsection{Hiearchical Bayesian Spatial Models}
+The models described by Model \ref{model:prop} and the extensions in Equations \label{formula:spUnpaired} and \label{formula:Unpaired} are all available for use in the package. The models are fit using the Gibbs sampler MCMC algorithm detailed earlier in this chapter, with the hierarchical centring version of Section \ref{sec:HC} used for datasets with $n>1$.
+
+The appropriate version of the model is chosen automatically based on the supplied arguments. The \texttt{conditionOfInterest} argument should be a vector representing the condition of each pixel, while the \texttt{techRep} vector must identify which tissue each pixel belongs to. The \texttt{bioRep} vector is optional; if the experiment has a subsampling or paired design then \texttt{bioRep} should identify which biological individual each pixel belongs to. These experimeal design arguments will often be columns in the \texttt{pixelData} of the \texttt{MSImageSet} object.
+
+<<cache=TRUE,message=FALSE,results='hide'>>=
+fitHBSM <- compareMSI(msset = s_multi$simSet,
+           conditionOfInterest = s_multi$simSet$diagnosis,
+           techRep = s_multi$simSet$sample,
+           bioRep = NULL,
+           feature = 1,
+           nsim = 5000, burnin=2500,
+           trace = T, dropZeros = F)
+@
+
+From the model fit we can access point estimates of the parameters of interest, such as the posterior probability of differential abundance.
+<<>>=
+fitHBSM$Feature1$gamma
+@
+
+We have also implemented the BFDR thresholding procedure (Chapter \ref{chap:proposed} and {Ventrucci2011}) to adjust for multiple comparisons.
+<<>>=
+postProbs <- runif(100) #simulating 100 posterior probabilities
+bfdr <- BFDRdecision(postProbs, alpha = 0.05)
+table(bfdr)
+@
+
+If the \texttt{trace} argument in \texttt{compareMSI} is set to \texttt{TRUE}, then the trace of the MCMC samples is returned.
+
+<<fig.height=4>>=
+plot(fitHBSM$Feature1$trace[,1], 
+     density = F, main = "Trace of baseline effect")
+@
+
+\subsection{Spatial modeling for MSI, as described in Cassese, et al}
+The spatial model proposed in {Cassese2016} is also available in the package. The code is based on the implementation in the supplementary information for {Cassese2016}, with a wrapper to streamline its use with \texttt{Cardinal} objects.
+
+<<cache=TRUE,message=FALSE,results='hide'>>=
+fit_spautolm <- cass(msset = s$simSet, 
+                     roiFactor = factor(s$simSet$diagnosis),
+                     logscale = F, thresholds = 1:5)
+@
+<<>>=
+fit_spautolm$results$CAR_AIC_min_pvalues
+@
+
+
+\subsection{ANOVA}
+ANOVA methods (Models \ref{model:locANOVA} and \ref{model:locANOVA}) are available natively in \texttt{R}, but we show them here for completeness:
+<<cache=TRUE>>=
+##### Location-wise ANOVA #####
+intensities <- c(spectra(s_multi$simSet)[1,])
+conditions <- s_multi$simSet$diagnosis
+
+# summary of model fit
+coef(summary(lm(intensities~conditions))) 
+@
+
+
+<<cache=TRUE>>=
+##### Tissue-wise ANOVA #####
+sampNames <- sampleNames(s_multi$simSet)
+samps <- s_multi$simSet$sample 
+
+# get tissue averages
+averages <- sapply(sampNames, 
+                   function(s) mean(intensities[samps== s]))
+
+#condition for each tissue
+conditions <- factor(c("Healthy","Healthy","Healthy",
+                       "Disease","Disease","Disease"))
+
+#summary of model fit
+coef(summary(lm(averages ~ conditions))) 
+@
+
+\end{document}
+
