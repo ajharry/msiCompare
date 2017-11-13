@@ -119,7 +119,10 @@ compareMSI_zerosSingle <- function(msset,conditionOfInterest,
   rm(spInit)
 
   ####### check for islands of unconnected pixels within tissues
-  W <- adj.grid(coord, sample = techRep)+0
+  W <- adj.grid(coord, sample = techRep,
+                type = type.neighbor,
+                radius = radius.neighbor,
+                max.dist = maxdist.neighbor)+0
   W.list<- mat2listw(W)
   W.nb <- W.list$neighbours
   W.islands <- n.comp.nb(W.nb)

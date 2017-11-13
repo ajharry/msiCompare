@@ -80,25 +80,38 @@ compareMSI <- function(msset,conditionOfInterest,
       techRep0 <- techRep[c(spectra(msset0) != 0)]
       bioRep0 <- bioRep[c(spectra(msset0) != 0)]
       conditionOfInterest0 <- conditionOfInterest[c(spectra(msset0) != 0)]
-      msset0 <- msset0[,c(spectra(msset0) != 0)]
       coord0 <- coord[c(spectra(msset0) != 0),]
+      msset0 <- msset0[,c(spectra(msset0) != 0)]
+
 
 
       #### drop pixels with no neighbors ####
-      W <- adj.grid(coord0, sample = factor(paste0(techRep0, conditionOfInterest0)), type.neighbor = type.neighbor, radius.neighbor = radius.neighbor, maxdist.neighbor = maxdist.neighbor)+0
+      W <- adj.grid(coord0, sample = factor(paste0(techRep0, conditionOfInterest0)),
+                    type = type.neighbor,
+                    radius = radius.neighbor,
+                    max.dist = maxdist.neighbor)+0
       lonely <- which(rowSums(W) == 0)
 
       if(length(lonely) > 0){
         rm(W)
         print(paste0("dropping ", length(lonely), " pixel(s) with no neighbors: "))
-        print(coord0[lonely,])
+        #print(coord0[lonely,])
 
+        coord0 <- coord0[-lonely,]
         msset0 <- msset0[,-lonely]
         techRep0 <- techRep0[-lonely]
         bioRep0 <- bioRep0[-lonely]
         conditionOfInterest0 <- conditionOfInterest0[-lonely]
 
-        W <- adj.grid(coord0, sample = techRep0, type.neighbor = type.neighbor, radius.neighbor = radius.neighbor, maxdist.neighbor = maxdist.neighbor)+0
+       if(any(table(techRep0) == 0)) warning("At least one tissue has no non-zero, non-island pixels")
+        
+        print("Remaining pixels per tissue:")
+        print(table(techRep0))
+
+        W <- adj.grid(coord0, sample = techRep0,
+                      type = type.neighbor,
+                      radius = radius.neighbor,
+                      max.dist = maxdist.neighbor)+0
       }else{
         print("All pixels have at least one neighbor.")
       }
@@ -116,7 +129,7 @@ compareMSI <- function(msset,conditionOfInterest,
         print("Fitting model version: drop zeros, multiple samples, hiearchical centering")
         res[[fInd]] <- compareMSI_zeros(msset0,conditionOfInterest0,
                                         feature=1, nsim, burnin, trace,
-                                        piPrior, seeds[fInd], logbase2, coord,
+                                        piPrior, seeds[fInd], logbase2, coord0,
                                         type.neighbor, radius.neighbor, maxdist.neighbor,
                                         spInit=NULL,
                                         bioRep0,
@@ -136,7 +149,7 @@ compareMSI <- function(msset,conditionOfInterest,
         print("Fitting model version: drop zeros, single sample")
         res[[fInd]] <- compareMSI_zerosSingle(msset0,conditionOfInterest0,
                                               feature=1, nsim, burnin, trace,
-                                              piPrior, seeds[fInd], logbase2, coord,
+                                              piPrior, seeds[fInd], logbase2, coord0,
                                               type.neighbor, radius.neighbor, maxdist.neighbor,
                                               spInit=NULL,
                                               bioRep0,
