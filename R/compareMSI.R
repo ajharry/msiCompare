@@ -56,6 +56,11 @@ compareMSI <- function(msset,conditionOfInterest,
 
   set.seed(seed) #random seed
 
+  if(is.null(coord)){
+    coord <- coord(msset)
+  }
+
+
 
   if(dropZeros){
     res <- vector("list", length(feature))
@@ -76,22 +81,24 @@ compareMSI <- function(msset,conditionOfInterest,
       bioRep0 <- bioRep[c(spectra(msset0) != 0)]
       conditionOfInterest0 <- conditionOfInterest[c(spectra(msset0) != 0)]
       msset0 <- msset0[,c(spectra(msset0) != 0)]
+      coord0 <- coord[c(spectra(msset0) != 0),]
+
 
       #### drop pixels with no neighbors ####
-      W <- adj.grid(coord(msset0), sample = factor(paste0(techRep0, conditionOfInterest0)))+0
+      W <- adj.grid(coord0, sample = factor(paste0(techRep0, conditionOfInterest0)), type.neighbor = type.neighbor, radius.neighbor = radius.neighbor, maxdist.neighbor = maxdist.neighbor)+0
       lonely <- which(rowSums(W) == 0)
 
       if(length(lonely) > 0){
         rm(W)
         print(paste0("dropping ", length(lonely), " pixel(s) with no neighbors: "))
-        print(coord(msset0)[lonely,])
+        print(coord0[lonely,])
 
         msset0 <- msset0[,-lonely]
         techRep0 <- techRep0[-lonely]
         bioRep0 <- bioRep0[-lonely]
         conditionOfInterest0 <- conditionOfInterest0[-lonely]
 
-        W <- adj.grid(coord(msset0), sample = techRep0)+0
+        W <- adj.grid(coord0, sample = techRep0, type.neighbor = type.neighbor, radius.neighbor = radius.neighbor, maxdist.neighbor = maxdist.neighbor)+0
       }else{
         print("All pixels have at least one neighbor.")
       }
@@ -180,9 +187,6 @@ compareMSI <- function(msset,conditionOfInterest,
 
 
 
-    if(is.null(coord)){
-      coord <- coord(msset)
-    }
 
 
     conditionOfInterest <- factor(conditionOfInterest) # make the condition labels a factor in case it is a character vector
