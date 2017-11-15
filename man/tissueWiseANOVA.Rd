@@ -5,7 +5,8 @@
 \title{t-test on averages}
 \usage{
 tissueWiseANOVA(msset, setSamp = pData(msset)$sample,
-  setCond = pData(msset)$diagnosis, setBioRep = NULL, logbase2 = F)
+  setCond = pData(msset)$diagnosis, setBioRep = NULL, logbase2 = F,
+  statusUpdates = T)
 }
 \arguments{
 \item{msset}{An MSImageSet object.}
