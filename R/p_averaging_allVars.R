@@ -13,9 +13,10 @@
 tissueWiseANOVA <- function(msset,
                         setSamp=pData(msset)$sample,
                         setCond = pData(msset)$diagnosis,
-                        setBioRep = NULL, logbase2 = F){
+                        setBioRep = NULL, logbase2 = F,statusUpdates= T){
 
   if(logbase2){
+    print("Log transforming spectra.")
     spec <- log2(spectra(msset))
   }else{
     spec <- spectra(msset)
@@ -30,7 +31,9 @@ tissueWiseANOVA <- function(msset,
   samples <- c()
   cond <- c()
 
+
   if(is.null(setBioRep)){
+    if(statusUpdates) print("Getting sample means.")
     for(s in sampNames){
       pixels1 <- (setSamp == s & setCond == condNames[1])
       pixels2 <- (setSamp == s & setCond == condNames[2])
@@ -49,20 +52,23 @@ tissueWiseANOVA <- function(msset,
 
     }
 
+    if(statusUpdates) print("Fitting ANOVA model.")
     lmfits <- apply(means,1, function(x) lm(x~cond))
 
+    if(statusUpdates) print("Summarizing results.")
     sig2b <- unname(unlist(lapply(lmfits, function(x) summary(x)$sigma^2))) #sigma2b estimate
     pvalue <- unname(unlist(lapply(lmfits, function(x) coef(summary(x))[2,'Pr(>|t|)']))) #pvalue
     intercept <- unname(unlist(lapply(lmfits, function(x) coef(summary(x))[1,'Estimate']))) #int estimate
     condDiff <- unname(unlist(lapply(lmfits, function(x) coef(summary(x))[2,'Estimate']))) #cond estimate
 
+    if(statusUpdates) print("Done.")
     return(list = list(sig2b= sig2b,
                        pvalue = pvalue,
                        intercept=intercept,
                        condDiff=condDiff))
 
   }else{ ### if there are bio replicates
-
+    if(statusUpdates) print("Getting sample means.")
     setBioRep <- factor(setBioRep)
     bioRepNames <- levels(setBioRep)
     bRep <- c()
@@ -89,14 +95,17 @@ tissueWiseANOVA <- function(msset,
       }
     }
 
+    if(statusUpdates) print("Fitting ANOVA model.")
     lmmfits <- apply(means, 1, function(m) lmer(m~cond + (1|bRep)))
 
+    if(statusUpdates) print("Summarizing results.")
     sig2tec <- unname(unlist(lapply(lmmfits, function(x) as.data.frame(VarCorr(x))[2, 'vcov']))) #sigma2btec estimate
     sig2bio <- unname(unlist(lapply(lmmfits, function(x) as.data.frame(VarCorr(x))[1, 'vcov'])) )#sigma2bio estimate
     pvalue <- unname(unlist(lapply(lmmfits, function(x) anova(x)['Pr(>F)']))) #pvalue
     intercept <- unname(unlist(lapply(lmmfits, function(x) summary(x)$coef[1,'Estimate']))) #int estimate
     condDiff <- unname(unlist(lapply(lmmfits, function(x) summary(x)$coef[2,'Estimate']))) #cond estimate
 
+    if(statusUpdates) print("Done.")
     return(list = list(pvalue = pvalue,
                        intercept=intercept,
                        condDiff=condDiff,
