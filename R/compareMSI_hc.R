@@ -20,7 +20,7 @@
 #' @param prec0 prior variance of baseline effect
 #' @param precAlpha0 prior mean of condition 2 effect
 #' @param d0 shape parameter of hyperprior of variances
-#' @param g0 scale parameter of hyperprior of variances
+#' @param g0 rate parameter of hyperprior of variances
 #' @param rd ratio of spike variance to slab variance for condition 2 effect
 #' @return res
 #' @import mvtnorm

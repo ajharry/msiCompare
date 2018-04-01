@@ -21,12 +21,12 @@
 #' @param precAlpha0 prior mean of condition 2 effect
 #' @param a0_eps shape parameter for measurment error precision hyperprior
 #' @param a0_bio shape parameter for biological replicate error precision hyperprior
-#' @param b0_eps scale parameter for measurment error precision hyperprior
-#' @param b0_bio scale parameter for biological replicate error precision hyperprior
+#' @param b0_eps rate parameter for measurment error precision hyperprior
+#' @param b0_bio rate parameter for biological replicate error precision hyperprior
 #' @param a0_tec shape parameter for sample to sample error precision hyperprior
-#' @param b0_tec scale parameter for sample to sample error precision hyperprior
+#' @param b0_tec rate parameter for sample to sample error precision hyperprior
 #' @param a0_sp shape parameter for spatial precision hyperprior
-#' @param b0_sp scale parameter for spatial precision hyperprior
+#' @param b0_sp rate parameter for spatial precision hyperprior
 #' @param rd ratio of spike variance to slab variance for condition 2 effect
 #' @return res
 #' @import mvtnorm
